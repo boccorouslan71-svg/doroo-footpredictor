@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>DOROO FootPredictor</title>
+
+<!-- =============================================================
+     DOROO FootPredictor — APPLICATION UTILISATEUR (fichier 1/2)
+     -------------------------------------------------------------
+     >>> Le panneau admin est dans le fichier separe : doroo-admin.html
+     -------------------------------------------------------------
+     >>> OU COLLER VOS CLES (cherchez ces balises) :
+        [PASTE_FIREBASE_CONFIG]   -> Cles Firebase (IDENTIQUES dans les 2 fichiers)
+        [PASTE_MONETAG_SCRIPT]    -> Zone / SDK Monetag (pub recompensee)
+        [PASTE_TELEGRAM_CHANNEL]  -> Lien de votre canal Telegram
+     -------------------------------------------------------------
+     >>> HEBERGEMENT BLOGGER :
+        1. Tableau de bord Blogger -> Pages -> Nouvelle page -> vue "HTML".
+        2. Collez TOUT ce fichier. Publiez.
+        3. Utilisez l'URL de la page comme URL de la Mini App dans BotFather.
+        4. Firebase > Auth > Parametres > Domaines autorises : ajoutez votre
+           domaine Blogger. Faites de meme pour l'URL du panneau admin.
+     ============================================================= -->
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-database.js"></script>
+<!-- [PASTE_MONETAG_SCRIPT] SDK Monetag (Telegram Mini App) : definit window.show_11423393() -->
+<script src="//libtl.com/sdk.js" data-zone="11423393" data-sdk="show_11423393"></script>
+
+<style>
+:root{
+  --primary-gradient: linear-gradient(135deg,#00d98b 0%,#00b0a0 55%,#8fd94a 100%);
+  --primary-solid:#00e08a;
+  --bg:#070b16;
+  --bg-grad: radial-gradient(1200px 600px at 15% -10%, #16305a 0%, rgba(22,48,90,0) 55%), radial-gradient(900px 500px at 100% 0%, #0d3d34 0%, rgba(13,61,52,0) 50%), linear-gradient(180deg,#0a1120 0%,#05070f 100%);
+  --text:#f4f7fb;
+  --text-2:#8f9bb3;
+  --text-3:#5c6780;
+  --accent:#00ff9c;
+  --gold:#ffd24a;
+  --card: linear-gradient(160deg, rgba(24,34,58,0.92), rgba(12,18,34,0.92));
+  --card-solid:#111a2e;
+  --glow: rgba(0,255,156,0.22);
+  --border: rgba(120,220,190,0.14);
+  --border-strong: rgba(120,220,190,0.30);
+  --danger:#ff5d73; --warn:#ffb020; --info:#4db5ff;
+  --r:18px; --r-sm:12px; --r-xs:9px; --nav-h:70px;
+  --sh: 0 10px 40px rgba(0,0,0,0.45);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  background:var(--bg);background-image:var(--bg-grad);background-attachment:fixed;
+  color:var(--text);font-size:15px;line-height:1.5;overflow:hidden;overscroll-behavior:none;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer;border:none;color:inherit;}
+input,select,textarea{font-family:inherit;font-size:15px;}
+svg{display:block;}
+.ico{width:22px;height:22px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.ico-sm{width:17px;height:17px;}
+.ico-lg{width:28px;height:28px;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-thumb{background:rgba(0,255,156,0.22);border-radius:10px;}
+.hidden{display:none !important;}
+.muted{color:var(--text-2);}
+.t-accent{color:var(--accent);}
+.t-gold{color:var(--gold);}
+.center{text-align:center;}
+.row{display:flex;align-items:center;gap:10px;}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.glass{background:rgba(17,26,46,0.55);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);border:1px solid var(--border);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin-bottom:14px;position:relative;overflow:hidden;}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:12px 18px;border-radius:var(--r-sm);font-weight:700;font-size:14.5px;color:#04140d;background:var(--primary-gradient);box-shadow:0 8px 22px var(--glow);transition:transform .12s,box-shadow .12s,opacity .12s;}
+.btn:active{transform:translateY(1px) scale(.99);}
+.btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
+.btn .ico{stroke:#04140d;}
+.btn-ghost{background:rgba(255,255,255,0.05);color:var(--text);border:1px solid var(--border);box-shadow:none;}
+.btn-ghost .ico{stroke:currentColor;}
+.btn-danger{background:linear-gradient(135deg,#ff5d73,#b31f45);color:#fff;box-shadow:0 8px 22px rgba(255,93,115,0.22);}
+.btn-danger .ico{stroke:#fff;}
+.btn-sm{min-height:36px;padding:7px 13px;font-size:13px;border-radius:10px;}
+.btn-block{width:100%;}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;}
+.pill .ico{width:13px;height:13px;}
+.pill.up{background:rgba(0,255,156,0.12);color:var(--accent);border:1px solid rgba(0,255,156,0.28);}
+.pill.lock{background:rgba(255,176,32,0.12);color:var(--warn);border:1px solid rgba(255,176,32,0.28);}
+.pill.fin{background:rgba(77,181,255,0.12);color:var(--info);border:1px solid rgba(77,181,255,0.28);}
+.pill.lose{background:rgba(255,93,115,0.12);color:var(--danger);border:1px solid rgba(255,93,115,0.28);}
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:12px;color:var(--text-2);margin-bottom:7px;font-weight:600;letter-spacing:.2px;}
+.input-wrap{position:relative;display:flex;align-items:center;}
+.input-wrap .ico{position:absolute;left:13px;stroke:var(--text-3);pointer-events:none;}
+.input-wrap input,.input-wrap select{padding-left:42px;}
+.field input,.field select,.field textarea{width:100%;padding:13px 14px;border-radius:var(--r-sm);background:rgba(255,255,255,0.035);border:1px solid var(--border);color:var(--text);outline:none;transition:border-color .15s,background .15s;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);background:rgba(0,255,156,0.04);}
+.field select option{background:#0d1322;color:#fff;}
+.sect{font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:8px 2px 12px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.sect .ico{width:16px;height:16px;stroke:var(--accent);}
+.coin{display:inline-flex;align-items:center;gap:5px;font-weight:800;color:var(--gold);}
+.coin .ico{width:15px;height:15px;stroke:var(--gold);}
+/* ---- loader ---- */
+#loader{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:var(--bg);background-image:var(--bg-grad);z-index:9999;}
+.brand{display:flex;align-items:center;gap:11px;font-size:22px;font-weight:900;letter-spacing:.5px;}
+.brand .logo{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:var(--primary-gradient);box-shadow:0 8px 26px var(--glow);}
+.brand .logo .ico{width:26px;height:26px;stroke:#04140d;stroke-width:2.2;}
+.brand .txt{background:var(--primary-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.spinner{width:52px;height:52px;border-radius:50%;border:3px solid rgba(0,255,156,0.14);border-top-color:var(--accent);animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+/* ---- lang switch ---- */
+.lang{display:inline-flex;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:999px;padding:3px;}
+.lang button{min-height:30px;padding:3px 11px;border-radius:999px;background:transparent;color:var(--text-2);font-weight:800;font-size:12px;letter-spacing:.5px;}
+.lang button.active{background:var(--primary-gradient);color:#04140d;}
+/* ---- auth ---- */
+#auth{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;overflow:auto;}
+.auth-card{width:100%;max-width:410px;}
+.auth-hero{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:22px;}
+.auth-badge{width:78px;height:78px;border-radius:24px;display:flex;align-items:center;justify-content:center;background:var(--primary-gradient);box-shadow:0 14px 40px var(--glow);}
+.auth-badge .ico{width:42px;height:42px;stroke:#04140d;stroke-width:2.1;}
+.tabs{display:flex;background:rgba(255,255,255,0.045);border-radius:13px;padding:4px;margin-bottom:18px;}
+.tabs button{flex:1;min-height:42px;border-radius:10px;background:transparent;color:var(--text-2);font-weight:700;font-size:14px;transition:.15s;}
+.tabs button.active{background:var(--primary-gradient);color:#04140d;}
+/* ---- shell ---- */
+#app{position:fixed;inset:0;display:flex;flex-direction:column;}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px calc(13px + env(safe-area-inset-top,0px));position:sticky;top:0;z-index:20;}
+.bal{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;font-weight:800;}
+.bal .coin{font-size:15px;}
+.top-actions{display:flex;gap:8px;align-items:center;}
+.iconbtn{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;position:relative;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text);}
+.iconbtn:active{background:rgba(255,255,255,0.09);}
+.dot{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--bg);}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 15px calc(var(--nav-h) + 26px);}
+.page{animation:fade .28s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+/* ---- bottom nav ---- */
+#nav{position:fixed;left:0;right:0;bottom:0;z-index:30;height:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);display:flex;background:rgba(9,14,26,0.72);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border-top:1px solid var(--border);}
+#nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:transparent;color:var(--text-3);font-size:10px;font-weight:700;letter-spacing:.2px;position:relative;transition:color .15s;}
+#nav button .ico{width:23px;height:23px;transition:transform .18s;}
+#nav button.active{color:var(--accent);}
+#nav button.active .ico{transform:translateY(-2px);stroke:var(--accent);}
+#nav button.active::before{content:"";position:absolute;top:7px;width:38px;height:38px;border-radius:50%;background:radial-gradient(circle,rgba(0,255,156,0.34),transparent 68%);filter:blur(3px);}
+/* ---- match card ---- */
+.league-head{display:flex;align-items:center;gap:9px;margin:18px 2px 11px;font-weight:800;font-size:14px;}
+.league-head .lg-ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:rgba(0,255,156,0.09);border:1px solid var(--border);}
+.league-head .lg-ic .ico{width:17px;height:17px;stroke:var(--accent);}
+.mt{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 12px;}
+.team{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;text-align:center;}
+.team .logo{width:52px;height:52px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#04140d;box-shadow:0 6px 16px rgba(0,0,0,0.3);}
+.team .name{font-size:13px;font-weight:700;line-height:1.2;}
+.vs{font-size:11px;font-weight:800;color:var(--text-3);letter-spacing:1px;}
+.score-big{font-size:24px;font-weight:900;color:var(--accent);letter-spacing:1px;}
+.mmeta{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text-2);margin-bottom:12px;}
+.mmeta .row{gap:6px;}
+.mmeta .ico{width:14px;height:14px;stroke:var(--text-2);}
+.mfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.odds{display:flex;gap:6px;}
+.odds span{padding:5px 9px;border-radius:9px;background:rgba(255,255,255,0.04);font-size:11px;font-weight:700;border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;line-height:1.25;}
+.odds span b{color:var(--accent);font-size:12px;}
+.odds span i{font-style:normal;color:var(--text-3);font-size:9px;}
+.mypick{margin-top:12px;font-size:12px;padding:9px 11px;border-radius:11px;background:rgba(0,255,156,0.05);border:1px dashed rgba(0,255,156,0.28);display:flex;gap:7px;align-items:flex-start;}
+.mypick .ico{width:15px;height:15px;stroke:var(--accent);flex-shrink:0;margin-top:1px;}
+/* ---- modal ---- */
+.overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center;background:rgba(3,6,14,0.62);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);animation:fade .2s ease;}
+.overlay.mid{align-items:center;}
+.modal{width:100%;max-width:450px;max-height:90vh;overflow-y:auto;border-radius:24px 24px 0 0;background:var(--card-solid);border:1px solid var(--border);padding:16px 18px calc(22px + env(safe-area-inset-bottom,0px));animation:up .3s cubic-bezier(.2,.8,.2,1);}
+.mid .modal{border-radius:22px;}
+@keyframes up{from{transform:translateY(50px);opacity:.5;}to{transform:none;opacity:1;}}
+.grab{width:44px;height:5px;border-radius:999px;background:rgba(255,255,255,0.18);margin:2px auto 16px;}
+.modal h3{font-size:18px;margin-bottom:3px;}
+.opt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;}
+.opt{padding:13px 6px;border-radius:13px;text-align:center;font-weight:700;font-size:13.5px;background:rgba(255,255,255,0.04);border:1px solid var(--border);transition:.14s;}
+.opt small{display:block;font-size:10px;color:var(--text-2);font-weight:600;margin-top:3px;}
+.opt.sel{background:var(--primary-gradient);color:#04140d;border-color:transparent;box-shadow:0 8px 18px var(--glow);}
+.opt.sel small{color:#04140d;}
+.score-in{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:8px;}
+.score-in input{width:66px;text-align:center;font-size:24px;font-weight:800;padding:11px;}
+/* ---- daily / stats ---- */
+.daily{position:relative;overflow:hidden;}
+.daily .ring{position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(0,255,156,0.18),transparent 70%);}
+.glow-pulse{animation:glow 1.7s ease-in-out infinite;}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(0,255,156,0.5);}50%{box-shadow:0 0 26px 7px rgba(0,255,156,0.5);}}
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;}
+.stat{padding:15px;border-radius:15px;background:rgba(255,255,255,0.03);border:1px solid var(--border);}
+.stat .ico{width:19px;height:19px;stroke:var(--accent);margin-bottom:9px;}
+.stat .v{font-size:22px;font-weight:900;}
+.stat .l{font-size:11px;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+.badges{display:flex;flex-wrap:wrap;gap:9px;}
+.badge{display:flex;align-items:center;gap:7px;padding:9px 12px;border-radius:13px;font-size:12px;font-weight:700;background:rgba(255,210,74,0.08);border:1px solid rgba(255,210,74,0.3);color:var(--gold);}
+.badge .ico{width:16px;height:16px;stroke:var(--gold);}
+.badge.locked{opacity:.4;filter:grayscale(.8);color:var(--text-2);border-color:var(--border);background:rgba(255,255,255,0.03);}
+.badge.locked .ico{stroke:var(--text-2);}
+/* ---- subtabs ---- */
+.subtabs{display:flex;gap:6px;background:rgba(255,255,255,0.045);padding:4px;border-radius:13px;margin-bottom:15px;}
+.subtabs button{flex:1;min-height:40px;border-radius:10px;background:transparent;color:var(--text-2);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px;}
+.subtabs button .ico{width:16px;height:16px;}
+.subtabs button.active{background:var(--primary-gradient);color:#04140d;}
+.subtabs button.active .ico{stroke:#04140d;}
+.task{display:flex;align-items:center;gap:13px;}
+.task .ic{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(0,255,156,0.09);border:1px solid var(--border);flex-shrink:0;}
+.task .ic .ico{stroke:var(--accent);}
+.task .info{flex:1;min-width:0;}
+.task .info .t{font-weight:700;font-size:14px;}
+.task .info .r{font-size:12px;color:var(--gold);font-weight:700;display:flex;align-items:center;gap:4px;margin-top:2px;}
+.task .info .r .ico{width:13px;height:13px;stroke:var(--gold);}
+.ref-link{display:flex;gap:8px;margin-top:10px;}
+.ref-link input{flex:1;}
+/* ---- leaderboard ---- */
+.lb{display:flex;align-items:center;gap:12px;padding:12px;border-radius:15px;margin-bottom:9px;background:rgba(255,255,255,0.03);border:1px solid var(--border);}
+.lb.me{background:rgba(0,255,156,0.08);border-color:rgba(0,255,156,0.4);}
+.lb .rk{width:32px;text-align:center;font-weight:900;font-size:15px;display:flex;align-items:center;justify-content:center;}
+.lb .rk .ico{width:22px;height:22px;}
+.lb .av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#04140d;flex-shrink:0;}
+.lb .nm{flex:1;font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lb .mt2{font-size:11px;color:var(--text-2);}
+/* ---- notif drawer ---- */
+#drawer{position:fixed;inset:0;z-index:120;display:flex;justify-content:flex-end;background:rgba(3,6,14,0.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);}
+#drawer .panel{width:min(370px,90vw);height:100%;overflow-y:auto;padding:16px 15px calc(16px + env(safe-area-inset-bottom,0px));background:var(--card-solid);border-left:1px solid var(--border);animation:sin .26s ease;}
+@keyframes sin{from{transform:translateX(36px);opacity:.4;}to{transform:none;opacity:1;}}
+.notif{display:flex;gap:11px;padding:12px;border-radius:13px;margin-bottom:9px;background:rgba(255,255,255,0.03);border:1px solid var(--border);}
+.notif .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.notif .ic .ico{width:17px;height:17px;}
+.notif .t{font-weight:700;font-size:13px;}
+.notif .m{font-size:12px;color:var(--text-2);}
+.notif .tm{font-size:10px;color:var(--text-3);margin-top:4px;}
+/* ---- toast ---- */
+#toasts{position:fixed;left:0;right:0;top:calc(14px + env(safe-area-inset-top,0px));z-index:2000;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+.toast{max-width:90vw;padding:11px 15px;border-radius:13px;font-size:13px;font-weight:600;color:#fff;background:rgba(17,26,46,0.96);border:1px solid var(--border);box-shadow:0 10px 30px rgba(0,0,0,.45);display:flex;align-items:center;gap:9px;}
+.toast .ico{width:17px;height:17px;flex-shrink:0;}
+.toast.ok{border-color:rgba(0,255,156,0.5);}
+.toast.ok .ico{stroke:var(--accent);}
+.toast.err{border-color:rgba(255,93,115,0.55);}
+.toast.err .ico{stroke:var(--danger);}
+.empty{text-align:center;color:var(--text-2);padding:40px 12px;font-size:14px;}
+.empty .ico{width:46px;height:46px;stroke:var(--text-3);margin:0 auto 12px;}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="brand"><span class="logo" id="loaderLogo"></span><span class="txt">DOROO</span></div>
+  <div class="spinner"></div>
+  <div class="muted" id="loaderTxt" style="font-size:13px">Connexion au stade…</div>
+</div>
+
+<div id="toasts"></div>
+
+<div id="auth" class="hidden">
+  <div class="card auth-card glass">
+    <div class="row-between" style="margin-bottom:4px"><span></span><div class="lang" id="authLang"></div></div>
+    <div class="auth-hero">
+      <div class="auth-badge" id="authBadge"></div>
+      <div class="brand" style="font-size:22px"><span class="txt">DOROO FootPredictor</span></div>
+      <div class="muted" id="authTag" style="font-size:13px"></div>
+    </div>
+    <div class="tabs">
+      <button id="tabLogin" class="active" data-i18n="login" onclick="App.switchAuth('login')"></button>
+      <button id="tabRegister" data-i18n="register" onclick="App.switchAuth('register')"></button>
+    </div>
+    <div class="field"><label data-i18n="username"></label><div class="input-wrap" id="iwUser"><input id="aUser" type="text" autocomplete="username" /></div></div>
+    <div class="field"><label data-i18n="password"></label><div class="input-wrap" id="iwPass"><input id="aPass" type="password" autocomplete="current-password" placeholder="••••••" /></div></div>
+    <div class="field hidden" id="refField"><label data-i18n="refCodeOpt"></label><div class="input-wrap" id="iwRef"><input id="aRef" type="text" /></div></div>
+    <button class="btn btn-block" id="aSubmit" onclick="App.submitAuth()"></button>
+    <p class="muted center" id="authNote" style="font-size:11px;margin-top:13px"></p>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="topbar glass">
+    <div class="bal glass"><span class="coin" id="topBal">0</span></div>
+    <div class="brand" style="font-size:16px"><span class="txt">DOROO</span></div>
+    <div class="top-actions">
+      <div class="lang" id="appLang"></div>
+      <button class="iconbtn" id="bellBtn" onclick="App.openNotifs()"><span class="dot hidden" id="dot">0</span></button>
+      <button class="iconbtn" id="logoutBtn" onclick="App.logout()"></button>
+    </div>
+  </div>
+  <div class="scroll" id="host"></div>
+  <nav id="nav"></nav>
+</div>
+
+<div id="drawer" class="hidden" onclick="if(event.target===this)App.closeNotifs()">
+  <div class="panel">
+    <div class="row-between" style="margin-bottom:14px"><h3 data-i18n="notifications"></h3><button class="btn btn-ghost btn-sm" data-i18n="close" onclick="App.closeNotifs()"></button></div>
+    <div id="notifList"></div>
+  </div>
+</div>
+
+<div id="modalHost"></div>
+
+<script>
+/* ================================================================
+   0. CONFIGURATION
+   ================================================================ */
+// [PASTE_FIREBASE_CONFIG] --> Cles Firebase (IDENTIQUES a l'admin).
+var firebaseConfig = {
+  apiKey: "AIzaSyDUNoM8TIOW9Xr-ta7riyFZQnihL5Y_oec",
+  authDomain: "doroopro.firebaseapp.com",
+  databaseURL: "https://doroopro-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "doroopro",
+  storageBucket: "doroopro.firebasestorage.app",
+  messagingSenderId: "113546586638",
+  appId: "1:113546586638:web:2b62ff6aae70463ec2aa5f"
+};
+// [PASTE_MONETAG_SCRIPT] --> Zone Monetag (le SDK est charge dans le <head>).
+var MONETAG = { ZONE_ID: "11423393" };
+// [PASTE_TELEGRAM_CHANNEL] --> Lien de votre canal Telegram.
+var TELEGRAM_CHANNEL = "https://t.me/YourChannel";
+var EMAIL_DOMAIN = "@doroofoot.game";
+var DEMO_MODE = false;
+</script>
+<script>
+/* ================================================================
+   FAILSAFE ANTI-BLOCAGE (independant du reste du code)
+   Revele l'ecran de connexion quoi qu'il arrive : erreur JS,
+   CDN injoignable, ou callback Firebase qui ne se declenche pas.
+   Enregistre AVANT toute la logique -> fonctionne meme si un bloc
+   plante au chargement.
+   ================================================================ */
+(function(){
+  function reveal(){
+    var l=document.getElementById("loader"); if(!l) return;
+    if(getComputedStyle(l).display==="none") return;      // deja masque -> tout va bien
+    var app=document.getElementById("app");
+    if(app && getComputedStyle(app).display!=="none") return; // app deja affichee
+    l.style.display="none";
+    var a=document.getElementById("auth"); if(a) a.classList.remove("hidden");
+  }
+  window.__dorooReveal=reveal;
+  window.__dorooFailsafe=setTimeout(reveal,3500);
+  window.addEventListener("error",function(){ setTimeout(reveal,300); });
+  window.addEventListener("unhandledrejection",function(){ setTimeout(reveal,300); });
+})();
+</script>
+<script>
+/* ================================================================
+   1. ICONS (SVG line set, unique & pro — stroke=currentColor)
+   ================================================================ */
+var ICONS = {
+  ball:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5l4.3 3.1-1.6 5H9.3l-1.6-5L12 7.5z"/><path d="M12 3v4.5M4.5 9.5l3.2 1.1M19.5 9.5l-3.2 1.1M7.7 19l1.6-3.4M16.3 19l-1.6-3.4"/></svg>',
+  history:'<svg class="ico" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/></svg>',
+  gift:'<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/><path d="M12 8S10.5 3 7.8 4.2C5.9 5 6.6 8 9 8h3zM12 8s1.5-5 4.2-3.8C18.1 5 17.4 8 15 8h-3z"/></svg>',
+  trophy:'<svg class="ico" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 5H5v2a3 3 0 0 0 3 3M16 5h3v2a3 3 0 0 1-3 3"/><path d="M12 13v4M9 20h6M10 20v-3h4v3"/></svg>',
+  user:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.5 3.6-6 8-6s8 2.5 8 6"/></svg>',
+  bell:'<svg class="ico" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+  power:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.4 6.4a8 8 0 1 0 11.2 0"/></svg>',
+  coin:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.6-1-1.7-1.5-3-1.5-1.7 0-3 .9-3 2.2 0 3 6 1.3 6 4.1 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.5-3-1.5M12 6.5v11"/></svg>',
+  clock:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  lock:'<svg class="ico" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  check:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg>',
+  checkCircle:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>',
+  x:'<svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  flag:'<svg class="ico" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+  target:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg>',
+  fire:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 3s5 4 5 9a5 5 0 0 1-10 0c0-1.5.6-2.7 1.3-3.6C9 10 10 11 10 12c0-2 1-4 2-9z"/></svg>',
+  medal:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="15" r="5"/><path d="M12 15l1 1.6 1.8.3-1.3 1.3.3 1.8L12 21l-1.8-.9.3-1.8-1.3-1.3 1.8-.3L12 15z"/><path d="M8 4l2 6M16 4l-2 6"/></svg>',
+  wallet:'<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14h2"/></svg>',
+  share:'<svg class="ico" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></svg>',
+  copy:'<svg class="ico" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
+  users:'<svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><path d="M16 5.2A3 3 0 0 1 16 11M21 20c0-2.4-1.6-4.2-4-4.8"/></svg>',
+  megaphone:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 10v4a1 1 0 0 0 1 1h2l8 4V5L7 9H5a1 1 0 0 0-1 1z"/><path d="M18 8a4 4 0 0 1 0 8"/></svg>',
+  cog:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>',
+  info:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+  bolt:'<svg class="ico" viewBox="0 0 24 24"><path d="M13 3L5 13h5l-1 8 8-10h-5l1-8z"/></svg>',
+  net:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16v12H4zM4 10h16M4 14h16M8 6v12M12 6v12M16 6v12"/></svg>',
+  play:'<svg class="ico" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7V5z"/></svg>',
+  scale:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 3v18M6 21h12M4 7l4-2 4 2M20 7l-4-2-4 2"/><path d="M4 7l-2 5a3 3 0 0 0 6 0L6 7zM20 7l-2 5a3 3 0 0 0 6 0l-2-5z"/></svg>',
+  whistle:'<svg class="ico" viewBox="0 0 24 24"><path d="M3 11a5 5 0 0 0 5 5h3l6 3v-6a6 6 0 0 0-6-6H8a5 5 0 0 0-5 4z"/><circle cx="7.5" cy="11.5" r="1.5"/><path d="M15 5l2-2M18 7l3-1"/></svg>'
+};
+function ic(name, cls){ var s=ICONS[name]||ICONS.info; if(cls) s=s.replace('class="ico"','class="ico '+cls+'"'); return s; }
+
+/* ================================================================
+   2. i18n (FR par defaut, EN disponible)
+   ================================================================ */
+var LANG = localStorage.getItem("doroo_lang") || "fr";
+var STR = {
+  fr:{
+    connecting:"Connexion au stade…", tagline:"Pronostique · Gagne des pièces · Encaisse",
+    login:"Connexion", register:"Inscription", username:"Nom d'utilisateur", password:"Mot de passe",
+    refCodeOpt:"Code de parrainage (optionnel)", refPlaceholder:"Code d'un ami",
+    userPlaceholder:"ex. buteur10", enter:"Entrer dans le stade", createAcc:"Créer un compte",
+    authNote:"Le nom est enregistré sous username@doroofoot.game pour Firebase Auth.",
+    nav_matches:"Matchs", nav_history:"Historique", nav_tasks:"Tâches", nav_ranks:"Classement", nav_profile:"Profil",
+    notifications:"Notifications", close:"Fermer", noNotifs:"Aucune notification pour l'instant",
+    dailyTitle:"Récompense quotidienne", dailyDesc:"Réclame {n} pièces toutes les 24h", claim:"Réclamer", claimed:"Réclamé",
+    noMatches:"Aucun match à venir. Reviens bientôt !", upcoming:"À venir", locked:"Verrouillé", finished:"Terminé", closed:"Fermé",
+    predict:"Pronostiquer", editPick:"Modifier", yourPick:"Ton choix :", won:"Gagné", lost:"Perdu",
+    winner:"Vainqueur du match", exactScore:"Score exact", totalGoals:"Total de buts", btts:"Les deux équipes marquent",
+    home:"Domicile", draw:"Nul", away:"Extérieur", over:"Plus de 2.5", under:"Moins de 2.5", around:"2 ou 3", yes:"Oui", no:"Non",
+    entryFee:"Frais d'entrée : {n} pièces", submitPred:"Valider le pronostic", cancel:"Annuler",
+    kickoff:"Coup d'envoi", predSaved:"Pronostic enregistré !", lockedTooLate:"Match verrouillé — trop tard.",
+    pickOne:"Fais au moins un choix.", notEnoughFee:"Pas assez de pièces pour les frais.",
+    historyTitle:"Historique des pronostics", noHistory:"Tu n'as encore aucun pronostic.", pending:"En attente", final:"Final :",
+    missions:"Missions", referrals:"Parrainage", noMissions:"Aucune mission active.", start:"Commencer", done:"Fait",
+    yourRefCode:"Ton code de parrainage", copy:"Copier", shareTg:"Partager sur Telegram",
+    friendsInvited:"Amis invités", coinsPerFriend:"Pièces / ami", linkCopied:"Lien de parrainage copié !",
+    topPredictors:"Meilleurs pronostiqueurs", noRanked:"Aucun joueur classé.", wins:"victoires", you:"Toi", yourPos:"Ta position",
+    profile:"Profil", joined:"Inscrit le", predictions:"Pronostics", accuracy:"Précision", badges:"Badges",
+    withdraw:"Retirer des pièces", withdrawInfo:"Min {min} pièces · Taux : {rate} pièces = 1 unité",
+    method:"Méthode", accDetails:"Détails du compte (numéro / adresse / email)", amount:"Montant (pièces)",
+    requestPayout:"Demander un retrait", payoutRequests:"Demandes de retrait", enterDetails:"Saisis les détails du compte.",
+    minWd:"Le retrait minimum est de {n} pièces.", insufficient:"Solde insuffisant.", wdSubmitted:"Demande de retrait envoyée",
+    badge_first:"Premier pari", badge_5wins:"5 victoires", badge_sharp:"Fin tireur", badge_rich:"Riche (1k)", badge_champ:"Champion",
+    dailyClaimed:"pièces réclamées !", alreadyClaimed:"Déjà réclamé. Reviens plus tard.", verifying:"Vérification…",
+    taskDone:"pièces ! Tâche accomplie", alreadyDone:"Déjà accompli.", adSim:"Pub indisponible.", adLoading:"Chargement de la pub…", adFail:"Pub non disponible pour le moment. Réessaie.", adReward:"Récompense créditée. Merci !", adBonusTitle:"Bonus vidéo", adBonusDesc:"Regarde une courte pub et gagne des pièces", adBonusBtn:"Regarder",
+    banned:"Ton compte est banni.", enterCreds:"Saisis un nom et un mot de passe (4+ car.).",
+    userExists:"Cet utilisateur existe déjà.", noUser:"Utilisateur inconnu — inscris-toi d'abord.",
+    tgDetected:"Telegram détecté :", adminHint:"Ceci est l'app joueur. Utilise le fichier admin pour gérer.",
+    goalsLabel:"Buts", scoreLabel:"Score", winnerShort:"Vainqueur", bttsShort:"BTTS"
+  },
+  en:{
+    connecting:"Connecting to the pitch…", tagline:"Predict · Win Coins · Cash Out",
+    login:"Login", register:"Register", username:"Username", password:"Password",
+    refCodeOpt:"Referral code (optional)", refPlaceholder:"Friend's code",
+    userPlaceholder:"e.g. striker10", enter:"Enter the Stadium", createAcc:"Create Account",
+    authNote:"Usernames are stored as username@doroofoot.game for Firebase Auth.",
+    nav_matches:"Matches", nav_history:"History", nav_tasks:"Tasks", nav_ranks:"Ranks", nav_profile:"Profile",
+    notifications:"Notifications", close:"Close", noNotifs:"No notifications yet",
+    dailyTitle:"Daily Reward", dailyDesc:"Claim {n} coins every 24h", claim:"Claim", claimed:"Claimed",
+    noMatches:"No upcoming matches. Check back soon!", upcoming:"Upcoming", locked:"Locked", finished:"Finished", closed:"Closed",
+    predict:"Predict", editPick:"Edit", yourPick:"Your pick:", won:"Won", lost:"Lost",
+    winner:"Match Winner", exactScore:"Exact Score", totalGoals:"Total Goals", btts:"Both Teams To Score",
+    home:"Home", draw:"Draw", away:"Away", over:"Over 2.5", under:"Under 2.5", around:"2 or 3", yes:"Yes", no:"No",
+    entryFee:"Entry fee: {n} coins", submitPred:"Submit Prediction", cancel:"Cancel",
+    kickoff:"Kickoff", predSaved:"Prediction saved!", lockedTooLate:"Match locked — too late.",
+    pickOne:"Make at least one selection.", notEnoughFee:"Not enough coins for entry fee.",
+    historyTitle:"Prediction History", noHistory:"You have no predictions yet.", pending:"Pending", final:"Final:",
+    missions:"Missions", referrals:"Referrals", noMissions:"No active missions.", start:"Start", done:"Done",
+    yourRefCode:"Your Referral Code", copy:"Copy", shareTg:"Share on Telegram",
+    friendsInvited:"Friends Invited", coinsPerFriend:"Coins / Friend", linkCopied:"Referral link copied!",
+    topPredictors:"Top Predictors", noRanked:"No players ranked yet.", wins:"wins", you:"You", yourPos:"Your Position",
+    profile:"Profile", joined:"Joined", predictions:"Predictions", accuracy:"Accuracy", badges:"Badges",
+    withdraw:"Withdraw Coins", withdrawInfo:"Min {min} coins · Rate: {rate} coins = 1 unit",
+    method:"Method", accDetails:"Account details (number / address / email)", amount:"Amount (coins)",
+    requestPayout:"Request Payout", payoutRequests:"Payout Requests", enterDetails:"Enter your account details.",
+    minWd:"Minimum withdrawal is {n} coins.", insufficient:"Insufficient balance.", wdSubmitted:"Withdrawal request submitted",
+    badge_first:"First Pick", badge_5wins:"5 Wins", badge_sharp:"Sharp Shooter", badge_rich:"Rich (1k)", badge_champ:"Champion",
+    dailyClaimed:"coins claimed!", alreadyClaimed:"Already claimed. Come back later.", verifying:"Verifying…",
+    taskDone:"coins! Task done", alreadyDone:"Already completed.", adSim:"Ad unavailable.", adLoading:"Loading ad…", adFail:"Ad not available right now. Try again.", adReward:"Reward credited. Thanks!", adBonusTitle:"Video Bonus", adBonusDesc:"Watch a short ad to earn coins", adBonusBtn:"Watch",
+    banned:"Your account is banned.", enterCreds:"Enter a username and a 4+ char password.",
+    userExists:"User already exists.", noUser:"No such user — register first.",
+    tgDetected:"Telegram detected:", adminHint:"This is the player app. Use the admin file to manage.",
+    goalsLabel:"Goals", scoreLabel:"Score", winnerShort:"Winner", bttsShort:"BTTS"
+  }
+};
+function t(k, vars){ var s=(STR[LANG] && STR[LANG][k]) || (STR.fr[k]) || k; if(vars){ Object.keys(vars).forEach(function(v){ s=s.replace("{"+v+"}", vars[v]); }); } return s; }
+function setLang(l){ LANG=l; localStorage.setItem("doroo_lang", l); document.documentElement.lang=l; applyStatic(); renderLangSwitch(); if(State.uid){ App.refreshChrome(); App.renderPage(); } }
+function renderLangSwitch(){
+  var html='<button class="'+(LANG==="fr"?"active":"")+'" onclick="setLang(\'fr\')">FR</button><button class="'+(LANG==="en"?"active":"")+'" onclick="setLang(\'en\')">EN</button>';
+  var a=$("authLang"), b=$("appLang"); if(a)a.innerHTML=html; if(b)b.innerHTML=html;
+}
+function applyStatic(){
+  document.querySelectorAll("[data-i18n]").forEach(function(e){ e.textContent=t(e.getAttribute("data-i18n")); });
+  $("loaderTxt").textContent=t("connecting");
+  $("authTag").textContent=t("tagline");
+  $("authNote").textContent=t("authNote");
+  $("aUser").placeholder=t("userPlaceholder");
+  $("aRef").placeholder=t("refPlaceholder");
+  $("aSubmit").textContent = App.authMode==="login"?t("enter"):t("createAcc");
+  // inject input icons
+  $("iwUser").insertAdjacentHTML("afterbegin", $("iwUser").querySelector("svg")?"":ic("user","ico-sm"));
+  $("iwPass").insertAdjacentHTML("afterbegin", $("iwPass").querySelector("svg")?"":ic("lock","ico-sm"));
+  $("iwRef").insertAdjacentHTML("afterbegin", $("iwRef").querySelector("svg")?"":ic("share","ico-sm"));
+}
+
+/* ================================================================
+   3. STATE + DEFAULTS
+   ================================================================ */
+var State={ uid:null, username:null, user:null, matches:{}, rules:null, missions:{}, currentPage:"matches", refCount:0, predDraft:null };
+var DEFAULT_RULES={ dailyReward:50, referralBonus:100, exchangeRate:1000, minWithdrawal:5000, entryFee:0, rewardWinner:60, rewardExactScore:250, rewardTotals:80, rewardBtts:70 };
+var DEFAULT_MISSIONS={
+  m1:{id:"m1",title:"Rejoindre le canal Telegram",titleEn:"Join our Telegram channel",reward:100,url:TELEGRAM_CHANNEL,active:true},
+  m2:{id:"m2",title:"Regarder une pub récompensée",titleEn:"Watch a rewarded ad",reward:30,url:"#ad",active:true},
+  m3:{id:"m3",title:"Faire ton premier pronostic",titleEn:"Make your first prediction",reward:50,url:"#predict",active:true}
+};
+var DEMO={ users:{}, matches:{}, withdrawals:{}, config:{}, logs:{} };
+
+/* ================================================================
+   4. FIREBASE INIT (mode demo si non configuré)
+   ================================================================ */
+var auth=null, db=null;
+try{
+  if(firebaseConfig.apiKey && firebaseConfig.apiKey!=="YOUR_API_KEY"){ firebase.initializeApp(firebaseConfig); auth=firebase.auth(); db=firebase.database(); }
+  else { DEMO_MODE=true; console.warn("[DOROO] Cles Firebase absentes — mode DEMO local."); }
+}catch(e){ DEMO_MODE=true; console.error("[DOROO] Firebase init échoué, mode DEMO:", e); }
+
+/* ================================================================
+   5. HELPERS + DB abstraction
+   ================================================================ */
+function $(id){ return document.getElementById(id); }
+function el(tag,cls,html){ var e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>\"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c];}); }
+function now(){ return Date.now(); }
+function genCode(){ return "DR"+Math.random().toString(36).slice(2,8).toUpperCase(); }
+function fmtTime(ts){ if(!ts)return ""; return new Date(ts).toLocaleString(LANG==='fr'?'fr-FR':'en-US',{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}); }
+function timeAgo(ts){ var s=Math.floor((now()-ts)/1000); if(s<60)return s+"s"; var m=Math.floor(s/60); if(m<60)return m+"m"; var h=Math.floor(m/60); if(h<24)return h+"h"; return Math.floor(h/24)+"j"; }
+function normArr(a){ if(!a)return []; if(Array.isArray(a))return a.filter(Boolean); return Object.keys(a).map(function(k){return a[k];}); }
+function avatarColor(name){ var h=0; name=name||"?"; for(var i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h); var hue=Math.abs(h)%360; return "linear-gradient(135deg,hsl("+hue+",70%,55%),hsl("+((hue+40)%360)+",70%,45%))"; }
+function toast(msg,type){ var i=type==="ok"?ic("checkCircle"):type==="err"?ic("info"):ic("bell"); var el2=el("div","toast "+(type||""),i+"<span>"+esc(msg)+"</span>"); $("toasts").appendChild(el2); setTimeout(function(){ el2.style.opacity="0"; el2.style.transition="opacity .25s"; setTimeout(function(){el2.remove();},250); },2600); }
+function haptic(kind){ try{ if(window.Telegram&&Telegram.WebApp&&Telegram.WebApp.HapticFeedback){ Telegram.WebApp.HapticFeedback.impactOccurred(kind||"light"); } }catch(e){} }
+
+var DBX={
+  read:function(p){ if(!DEMO_MODE)return db.ref(p).once("value").then(function(s){return s.val();}); return Promise.resolve(demoRead(p)); },
+  write:function(p,v){ if(!DEMO_MODE)return db.ref(p).set(v); demoWrite(p,v); return Promise.resolve(); },
+  update:function(p,v){ if(!DEMO_MODE)return db.ref(p).update(v); var c=demoRead(p)||{}; Object.keys(v).forEach(function(k){c[k]=v[k];}); demoWrite(p,c); return Promise.resolve(); },
+  remove:function(p){ if(!DEMO_MODE)return db.ref(p).remove(); demoRemove(p); return Promise.resolve(); },
+  onValue:function(p,cb){ if(!DEMO_MODE){ db.ref(p).on("value",function(s){cb(s.val());}); } else cb(demoRead(p)); }
+};
+function demoRead(p){ var a=p.split("/"),o=DEMO; for(var i=0;i<a.length;i++){ if(o==null)return null; o=o[a[i]]; } return o===undefined?null:o; }
+function demoWrite(p,v){ var a=p.split("/"),o=DEMO; for(var i=0;i<a.length-1;i++){ if(o[a[i]]==null)o[a[i]]={}; o=o[a[i]]; } o[a[a.length-1]]=v; }
+function demoRemove(p){ var a=p.split("/"),o=DEMO; for(var i=0;i<a.length-1;i++){ if(o[a[i]]==null)return; o=o[a[i]]; } delete o[a[a.length-1]]; }
+</script>
+<script>
+/* ================================================================
+   6. SEED (matchs / regles / missions au 1er lancement)
+   ================================================================ */
+function seedIfEmpty(){
+  return Promise.all([DBX.read("config/rules"),DBX.read("config/missions"),DBX.read("matches")]).then(function(r){
+    var tasks=[];
+    if(!r[0]) tasks.push(DBX.write("config/rules",DEFAULT_RULES));
+    if(!r[1]) tasks.push(DBX.write("config/missions",DEFAULT_MISSIONS));
+    if(!r[2]||Object.keys(r[2]||{}).length===0) tasks.push(DBX.write("matches",buildDemoMatches()));
+    return Promise.all(tasks);
+  });
+}
+function buildDemoMatches(){
+  var base=now(),H=3600000;
+  function mk(id,lg,a,ac,b,bc,inH){ return {id:id,league:lg,teamA:a,teamAColor:ac,teamB:b,teamBColor:bc,kickoff:base+inH*H,status:"upcoming",result:null,odds:{home:2.1,draw:3.3,away:2.9}}; }
+  var m={};
+  m.m101=mk("m101","Premier League","Arsenal","#EF0107","Chelsea","#034694",4);
+  m.m102=mk("m102","Premier League","Liverpool","#C8102E","Man City","#6CABDD",26);
+  m.m201=mk("m201","La Liga","Real Madrid","#FEBE10","Barcelona","#A50044",6);
+  m.m202=mk("m202","La Liga","Sevilla","#D9001B","Valencia","#EE7203",30);
+  m.m301=mk("m301","Champions League","Bayern","#DC052D","PSG","#004170",8);
+  m.m302=mk("m302","Champions League","Inter","#0068A8","Porto","#0055A5",-2);
+  return m;
+}
+function teamInitials(n){ n=(n||"").trim(); var p=n.split(/\s+/); return (p.length>1?(p[0][0]+p[1][0]):n.slice(0,2)).toUpperCase(); }
+function leagueIcon(lg){ if(/champ/i.test(lg))return "trophy"; if(/liga|serie|bundes|ligue/i.test(lg))return "medal"; return "net"; }
+
+/* ================================================================
+   7. AUTH + TELEGRAM
+   ================================================================ */
+var App={}; App.authMode="login";
+App.switchAuth=function(m){ App.authMode=m; $("tabLogin").classList.toggle("active",m==="login"); $("tabRegister").classList.toggle("active",m==="register"); $("refField").classList.toggle("hidden",m!=="register"); $("aSubmit").textContent=m==="login"?t("enter"):t("createAcc"); };
+
+App.boot=function(){
+  $("loaderLogo").innerHTML=ic("ball"); $("authBadge").innerHTML=ic("ball");
+  document.documentElement.lang=LANG; renderLangSwitch(); applyStatic();
+  try{ if(window.Telegram&&Telegram.WebApp){ Telegram.WebApp.ready(); Telegram.WebApp.expand(); } }catch(e){}
+  var tg=null; try{ tg=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initDataUnsafe&&Telegram.WebApp.initDataUnsafe.user; }catch(e){}
+  var started=false; function go(){ if(started)return; started=true; App.showAuth(tg); }
+  setTimeout(go,5000); // filet de securite : ne jamais rester bloque sur le loader
+  try{
+    if(DEMO_MODE){ seedIfEmpty().then(go).catch(go); }
+    else if(auth){ auth.onAuthStateChanged(function(u){ started=true; if(u){ App.afterLogin(u.uid,(u.email||"").replace(EMAIL_DOMAIN,"")); } else App.showAuth(tg); }, function(e){ console.error(e); go(); }); }
+    else go();
+  }catch(e){ console.error(e); go(); }
+};
+App.showAuth=function(tg){ $("loader").classList.add("hidden"); if(tg&&tg.username){ $("aUser").value=tg.username; $("aPass").value="tg_"+tg.id; toast(t("tgDetected")+" "+tg.username,"ok"); } $("auth").classList.remove("hidden"); };
+
+App.submitAuth=function(){
+  var u=$("aUser").value.trim().toLowerCase(), p=$("aPass").value, ref=($("aRef").value||"").trim().toUpperCase();
+  if(!u||p.length<4){ toast(t("enterCreds"),"err"); return; }
+  if(u==="admin"){ toast(t("adminHint"),"err"); return; }
+  $("aSubmit").disabled=true;
+  if(DEMO_MODE){
+    var uid="demo_"+u;
+    DBX.read("users/"+uid).then(function(ex){
+      if(App.authMode==="register"&&ex){ toast(t("userExists"),"err"); $("aSubmit").disabled=false; return; }
+      if(App.authMode==="login"&&!ex){ toast(t("noUser"),"err"); $("aSubmit").disabled=false; return; }
+      (ex?Promise.resolve():App.createUser(uid,u,ref)).then(function(){ App.afterLogin(uid,u); });
+    }); return;
+  }
+  var email=u+EMAIL_DOMAIN;
+  var op=App.authMode==="register"
+    ? auth.createUserWithEmailAndPassword(email,p).then(function(c){ return App.createUser(c.user.uid,u,ref); })
+    : auth.signInWithEmailAndPassword(email,p);
+  op.catch(function(e){ toast(e.message||"Auth error","err"); $("aSubmit").disabled=false; });
+};
+App.createUser=function(uid,username,refCode){
+  var rec={ username:username, coins:0, stats:{totalPredictions:0,won:0,lost:0,winRate:0}, predictions:{}, lastDailyClaim:0, referredBy:null, referralCode:genCode(), completedTasks:[], notifications:[], withdrawals:[], banned:false, joinDate:new Date().toISOString() };
+  var chain=DBX.write("users/"+uid,rec);
+  if(refCode){ chain=chain.then(function(){ return DBX.read("users"); }).then(function(all){ if(!all)return; var ru=null; Object.keys(all).forEach(function(k){ if(all[k].referralCode===refCode)ru=k; }); if(ru&&ru!==uid){ return DBX.read("config/rules").then(function(r){ var bonus=(r&&r.referralBonus)||DEFAULT_RULES.referralBonus; return Promise.all([ DBX.update("users/"+uid,{referredBy:ru}), DBX.update("users/"+ru,{coins:(all[ru].coins||0)+bonus}), pushNotif(ru,"gain",LANG==="fr"?"Bonus de parrainage !":"Referral bonus!",(LANG==="fr"?"Tu as gagné ":"You earned ")+bonus+(LANG==="fr"?" pièces grâce à un nouvel ami":" coins from a new friend")) ]); }); } }); }
+  return chain;
+};
+App.afterLogin=function(uid,username){
+  State.uid=uid; State.username=username; $("auth").classList.add("hidden"); $("loader").classList.add("hidden"); $("app").classList.remove("hidden");
+  $("bellBtn").innerHTML=ic("bell")+'<span class="dot hidden" id="dot">0</span>'; $("logoutBtn").innerHTML=ic("power");
+  buildNav();
+  DBX.onValue("users/"+uid,function(u){ if(!u)return; if(u.banned){ toast(t("banned"),"err"); App.logout(); return; } State.user=u; App.refreshChrome(); if(State.currentPage)App.renderPage(); });
+  DBX.onValue("matches",function(m){ State.matches=m||{}; if(State.currentPage==="matches"||State.currentPage==="history")App.renderPage(); });
+  DBX.onValue("config/rules",function(r){ State.rules=r||DEFAULT_RULES; });
+  DBX.onValue("config/missions",function(m){ State.missions=m||{}; if(State.currentPage==="tasks")App.renderPage(); });
+  App.showPage("matches");
+};
+App.logout=function(){ if(!DEMO_MODE&&auth)auth.signOut(); State={uid:null,username:null,user:null,matches:{},rules:null,missions:{},currentPage:"matches",refCount:0,predDraft:null}; $("app").classList.add("hidden"); $("auth").classList.remove("hidden"); $("aSubmit").disabled=false; };
+App.refreshChrome=function(){ if(!State.user)return; $("topBal").innerHTML=ic("coin")+Math.round(State.user.coins||0); var n=normArr(State.user.notifications), un=n.filter(function(x){return !x.read;}).length; var d=$("dot"); if(un>0){ d.classList.remove("hidden"); d.textContent=un>9?"9+":un; } else d.classList.add("hidden"); };
+
+/* ================================================================
+   8. NAV
+   ================================================================ */
+function buildNav(){
+  var items=[["matches","ball","nav_matches"],["history","history","nav_history"],["tasks","gift","nav_tasks"],["leaderboard","trophy","nav_ranks"],["profile","user","nav_profile"]];
+  $("nav").innerHTML=items.map(function(it){ return '<button data-page="'+it[0]+'" class="'+(State.currentPage===it[0]?"active":"")+'" onclick="App.showPage(\''+it[0]+'\')">'+ic(it[1])+t(it[2])+'</button>'; }).join("");
+}
+
+/* ================================================================
+   9. NOTIFICATIONS
+   ================================================================ */
+function pushNotif(uid,type,title,msg,opts){ opts=opts||{}; return DBX.read("users/"+uid+"/notifications").then(function(l){ l=normArr(l); l.unshift({type:type,title:title,message:msg,image:opts.image||null,link:opts.link||null,ts:now(),read:false}); if(l.length>50)l=l.slice(0,50); return DBX.write("users/"+uid+"/notifications",l); }); }
+App.openNotifs=function(){
+  var l=normArr(State.user&&State.user.notifications), host=$("notifList"); host.innerHTML="";
+  if(l.length===0){ host.innerHTML='<div class="empty">'+ic("bell")+'<div>'+t("noNotifs")+'</div></div>'; }
+  else{ var meta={gain:["coin","rgba(255,210,74,0.12)","var(--gold)"],win:["trophy","rgba(0,255,156,0.12)","var(--accent)"],announce:["megaphone","rgba(77,181,255,0.12)","var(--info)"],system:["cog","rgba(143,155,179,0.12)","var(--text-2)"]};
+    l.forEach(function(n){ var mt=meta[n.type]||meta.system; var node=el("div","notif"); node.innerHTML='<div class="ic" style="background:'+mt[1]+'">'+ic(mt[0]).replace('class="ico"','class="ico" style="stroke:'+mt[2]+'"')+'</div><div style="flex:1"><div class="t">'+esc(n.title)+'</div><div class="m">'+esc(n.message)+'</div>'+(n.link?'<a href="'+esc(n.link)+'" target="_blank" style="font-size:12px;color:var(--accent)">↗</a>':'')+'<div class="tm">'+timeAgo(n.ts)+'</div></div>'; host.appendChild(node); }); }
+  $("drawer").classList.remove("hidden");
+  if(l.some(function(n){return !n.read;})){ l.forEach(function(n){n.read=true;}); DBX.write("users/"+State.uid+"/notifications",l).then(App.refreshChrome); }
+};
+App.closeNotifs=function(){ $("drawer").classList.add("hidden"); };
+
+/* ================================================================
+   10. ROUTER
+   ================================================================ */
+App.showPage=function(p){ State.currentPage=p; Array.prototype.forEach.call(document.querySelectorAll("#nav button"),function(b){ b.classList.toggle("active",b.getAttribute("data-page")===p); }); App.renderPage(); $("host").scrollTop=0; };
+App.renderPage=function(){ var h=$("host"); switch(State.currentPage){ case"matches":h.innerHTML=V.matches();break; case"history":h.innerHTML=V.history();break; case"tasks":h.innerHTML=V.tasks(); if(V.tab==="referral")App.countRef(); break; case"leaderboard":h.innerHTML='<div class="empty">'+ic("clock")+'<div>…</div></div>'; V.leaderboard(h); break; case"profile":h.innerHTML=V.profile();break; } };
+
+/* ================================================================
+   11. MATCH LOGIC
+   ================================================================ */
+function mStatus(m){ if(m.result)return "finished"; if(now()>=m.kickoff)return "locked"; return "upcoming"; }
+function myPred(id){ var p=State.user&&State.user.predictions; return p?p[id]:null; }
+
+/* ================================================================
+   12. VIEWS
+   ================================================================ */
+var V={}; V.tab="missions";
+V.teamBlock=function(name,color){ return '<div class="team"><div class="logo" style="background:'+(color||"var(--primary-gradient)")+'">'+esc(teamInitials(name))+'</div><div class="name">'+esc(name)+'</div></div>'; };
+V.matches=function(){
+  var r=State.rules||DEFAULT_RULES, last=State.user?State.user.lastDailyClaim||0:0, canDaily=now()-last>=864e5, h='';
+  h+='<div class="card daily"><div class="ring"></div><div class="row-between"><div><div style="font-weight:800;font-size:16px">'+t("dailyTitle")+'</div><div class="muted" style="font-size:13px;margin-top:2px">'+t("dailyDesc",{n:r.dailyReward})+'</div></div><button class="btn '+(canDaily?"glow-pulse":"")+'" '+(canDaily?"":"disabled")+' onclick="App.claimDaily()">'+ic("gift","ico-sm")+(canDaily?t("claim"):t("claimed"))+'</button></div></div>';
+  h+='<div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div class="row"><span style="width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:rgba(0,255,156,0.1);border:1px solid var(--border);flex-shrink:0">'+ic("play").replace('class="ico"','class="ico" style="stroke:var(--accent)"')+'</span><div><div style="font-weight:800">'+t("adBonusTitle")+'</div><div class="muted" style="font-size:12px">'+t("adBonusDesc")+'</div></div></div><button class="btn btn-sm" onclick="App.watchAdBonus()">'+ic("play","ico-sm")+t("adBonusBtn")+'</button></div>';
+  var list=normArr(State.matches).filter(function(m){return mStatus(m)!=="finished";});
+  if(list.length===0){ h+='<div class="empty">'+ic("ball")+'<div>'+t("noMatches")+'</div></div>'; return h; }
+  var g={}; list.forEach(function(m){ (g[m.league]=g[m.league]||[]).push(m); });
+  Object.keys(g).forEach(function(lg){ var arr=g[lg].sort(function(a,b){return a.kickoff-b.kickoff;}); h+='<div class="league-head"><span class="lg-ic">'+ic(leagueIcon(lg),"ico-sm")+'</span>'+esc(lg)+'</div>'; arr.forEach(function(m){ h+=V.matchCard(m); }); });
+  return h;
+};
+V.matchCard=function(m){
+  var st=mStatus(m), pred=myPred(m.id);
+  var pill=st==="upcoming"?'<span class="pill up">'+ic("bolt")+t("upcoming")+'</span>':st==="locked"?'<span class="pill lock">'+ic("lock")+t("locked")+'</span>':'<span class="pill fin">'+ic("check")+t("finished")+'</span>';
+  var thumb=m.thumbnail?('<div style="margin:-16px -16px 12px;height:118px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(7,11,22,.1),rgba(7,11,22,.82)),url(&quot;'+esc(m.thumbnail)+'&quot;) center/cover"></div>'):'';
+  var h='<div class="card"'+(m.thumbnail?' style="padding-top:0"':'')+'>'+thumb+'<div class="mmeta">'+pill+'<span class="row">'+ic("clock")+fmtTime(m.kickoff)+'</span></div>';
+  h+='<div class="mt">'+V.teamBlock(m.teamA,m.teamAColor)+(m.result?'<div class="score-big">'+m.result.a+' - '+m.result.b+'</div>':'<div class="vs">VS</div>')+V.teamBlock(m.teamB,m.teamBColor)+'</div>';
+  h+='<div class="mfoot"><div class="odds"><span><i>1</i><b>'+m.odds.home+'</b></span><span><i>X</i><b>'+m.odds.draw+'</b></span><span><i>2</i><b>'+m.odds.away+'</b></span></div>';
+  if(st==="upcoming")h+='<button class="btn btn-sm" onclick="App.openPredict(\''+m.id+'\')">'+ic("target","ico-sm")+(pred?t("editPick"):t("predict"))+'</button>';
+  else if(st==="locked")h+='<span class="pill lock">'+ic("lock")+t("closed")+'</span>';
+  h+='</div>';
+  if(pred)h+='<div class="mypick">'+ic("target")+'<div><b>'+t("yourPick")+'</b> '+V.predSummary(pred)+(pred.settled?(pred.won?' · '+t("won")+' +'+pred.payout:' · '+t("lost")):'')+'</div></div>';
+  return h+'</div>';
+};
+V.predSummary=function(p){ var a=[]; if(p.winner)a.push(t("winnerShort")+": "+(p.winner==="home"?t("home"):p.winner==="away"?t("away"):t("draw"))); if(p.exact)a.push(t("scoreLabel")+": "+p.exact.a+"-"+p.exact.b); if(p.totals)a.push(t("goalsLabel")+": "+(p.totals==="over"?t("over"):p.totals==="under"?t("under"):t("around"))); if(p.btts)a.push(t("bttsShort")+": "+(p.btts==="yes"?t("yes"):t("no"))); return a.join(" · ")||"—"; };
+V.history=function(){
+  var preds=(State.user&&State.user.predictions)||{}, ids=Object.keys(preds);
+  var h='<div class="sect">'+ic("history")+t("historyTitle")+'</div>';
+  if(ids.length===0)return h+'<div class="empty">'+ic("history")+'<div>'+t("noHistory")+'</div></div>';
+  ids.sort(function(a,b){return (preds[b].ts||0)-(preds[a].ts||0);}).forEach(function(id){ var p=preds[id], m=State.matches[id], title=m?m.teamA+" vs "+m.teamB:"Match "+id; var badge=p.settled?(p.won?'<span class="pill up">'+ic("check")+t("won")+' +'+p.payout+'</span>':'<span class="pill lose">'+ic("x")+t("lost")+'</span>'):'<span class="pill lock">'+ic("clock")+t("pending")+'</span>'; h+='<div class="card"><div class="row-between"><div style="font-weight:700;font-size:14px">'+esc(title)+'</div>'+badge+'</div><div class="muted" style="font-size:12px;margin-top:5px">'+V.predSummary(p)+'</div>'+(m&&m.result?'<div class="muted" style="font-size:12px;margin-top:2px">'+t("final")+' '+m.result.a+' - '+m.result.b+'</div>':'')+'</div>'; });
+  return h;
+};
+V.setTab=function(x){ V.tab=x; App.renderPage(); };
+V.tasks=function(){
+  var h='<div class="subtabs"><button class="'+(V.tab==="missions"?"active":"")+'" onclick="V.setTab(\'missions\')">'+ic("gift")+t("missions")+'</button><button class="'+(V.tab==="referral"?"active":"")+'" onclick="V.setTab(\'referral\')">'+ic("users")+t("referrals")+'</button></div>';
+  if(V.tab==="missions"){ var ms=normArr(State.missions).filter(function(m){return m.active;}), done=(State.user&&State.user.completedTasks)||[]; if(ms.length===0)h+='<div class="empty">'+ic("gift")+'<div>'+t("noMissions")+'</div></div>'; ms.forEach(function(m){ var cl=done.indexOf(m.id)>=0; var title=LANG==="en"&&m.titleEn?m.titleEn:m.title; h+='<div class="card"><div class="task"><div class="ic">'+ic("target")+'</div><div class="info"><div class="t">'+esc(title)+'</div><div class="r">'+ic("coin")+'+'+m.reward+'</div></div><button class="btn btn-sm" '+(cl?"disabled":"")+' onclick="App.doTask(\''+m.id+'\')">'+(cl?ic("check","ico-sm")+t("done"):ic("play","ico-sm")+t("start"))+'</button></div></div>'; }); }
+  else{ var code=(State.user&&State.user.referralCode)||"—", link=location.origin+location.pathname+"?ref="+code, invited=State.refCount||0, r=State.rules||DEFAULT_RULES; h+='<div class="card"><div class="sect" style="margin:0 0 8px">'+ic("share")+t("yourRefCode")+'</div><div style="font-size:26px;font-weight:900;letter-spacing:2px" class="t-accent">'+esc(code)+'</div><div class="ref-link"><div class="field" style="flex:1;margin:0"><input id="refLink" value="'+esc(link)+'" readonly /></div><button class="btn btn-sm" onclick="App.copyRef()">'+ic("copy","ico-sm")+t("copy")+'</button></div><button class="btn btn-block" style="margin-top:11px" onclick="App.shareRef(\''+esc(link)+'\')">'+ic("share","ico-sm")+t("shareTg")+'</button></div>'; h+='<div class="stat-grid"><div class="stat">'+ic("users")+'<div class="v t-accent">'+invited+'</div><div class="l">'+t("friendsInvited")+'</div></div><div class="stat">'+ic("coin")+'<div class="v t-gold">'+r.referralBonus+'</div><div class="l">'+t("coinsPerFriend")+'</div></div></div>'; }
+  return h;
+};
+V.leaderboard=function(host){
+  DBX.read("users").then(function(all){ all=all||{}; var rows=Object.keys(all).map(function(uid){ var u=all[uid]; return {uid:uid,username:u.username,coins:u.coins||0,won:(u.stats&&u.stats.won)||0}; }).filter(function(r){return r.username!=="admin";}).sort(function(a,b){return (b.won-a.won)||(b.coins-a.coins);}); var top=rows.slice(0,50), myRank=rows.findIndex(function(r){return r.uid===State.uid;})+1; var h='<div class="sect">'+ic("trophy")+t("topPredictors")+'</div>'; if(top.length===0){ host.innerHTML='<div class="empty">'+ic("trophy")+'<div>'+t("noRanked")+'</div></div>'; return; }
+    top.forEach(function(r,i){ var rk=i+1,me=r.uid===State.uid; var rkH=rk<=3?ic("medal").replace('class="ico"','class="ico" style="stroke:'+(rk===1?"var(--gold)":rk===2?"#c8d0dc":"#cd7f32")+'"'):rk; h+='<div class="lb '+(me?"me":"")+'"><div class="rk">'+rkH+'</div><div class="av" style="background:'+avatarColor(r.username)+'">'+esc((r.username||"?").charAt(0).toUpperCase())+'</div><div class="nm">'+esc(r.username)+(me?" ("+t("you")+")":"")+'</div><div style="text-align:right"><div class="coin">'+r.coins+'</div><div class="mt2">'+r.won+' '+t("wins")+'</div></div></div>'; });
+    if(myRank>50){ var me2=rows[myRank-1]; h+='<div class="sect" style="margin-top:14px">'+ic("user")+t("yourPos")+'</div><div class="lb me"><div class="rk">'+myRank+'</div><div class="av" style="background:'+avatarColor(me2.username)+'">'+esc((me2.username||"?").charAt(0).toUpperCase())+'</div><div class="nm">'+esc(me2.username)+' ('+t("you")+')</div><div style="text-align:right"><div class="coin">'+me2.coins+'</div><div class="mt2">'+me2.won+' '+t("wins")+'</div></div></div>'; }
+    host.innerHTML=h;
+  });
+};
+V.profile=function(){
+  var u=State.user||{}, s=u.stats||{}, r=State.rules||DEFAULT_RULES, acc=s.totalPredictions?Math.round((s.won/s.totalPredictions)*100):0;
+  var badges=[["bolt","badge_first",(s.totalPredictions||0)>=1],["fire","badge_5wins",(s.won||0)>=5],["target","badge_sharp",acc>=60&&s.totalPredictions>=5],["coin","badge_rich",(u.coins||0)>=1000],["trophy","badge_champ",(s.won||0)>=25]];
+  var h='<div class="sect">'+ic("user")+t("profile")+'</div>';
+  h+='<div class="card"><div class="row-between"><div class="row"><div class="av" style="width:54px;height:54px;font-size:20px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#04140d;background:'+avatarColor(u.username)+'">'+esc((u.username||"?").charAt(0).toUpperCase())+'</div><div><div style="font-weight:800;font-size:17px">'+esc(u.username)+'</div><div class="muted" style="font-size:12px">'+t("joined")+' '+(u.joinDate?new Date(u.joinDate).toLocaleDateString(LANG==="fr"?"fr-FR":"en-US"):"—")+'</div></div></div><div class="coin" style="font-size:20px">'+Math.round(u.coins||0)+'</div></div></div>';
+  h+='<div class="stat-grid"><div class="stat">'+ic("target")+'<div class="v">'+(s.totalPredictions||0)+'</div><div class="l">'+t("predictions")+'</div></div><div class="stat">'+ic("trophy")+'<div class="v t-accent">'+(s.won||0)+'</div><div class="l">'+t("won")+'</div></div><div class="stat">'+ic("x")+'<div class="v" style="color:var(--danger)">'+(s.lost||0)+'</div><div class="l">'+t("lost")+'</div></div><div class="stat">'+ic("scale")+'<div class="v t-gold">'+acc+'%</div><div class="l">'+t("accuracy")+'</div></div></div>';
+  h+='<div class="sect" style="margin-top:16px">'+ic("medal")+t("badges")+'</div><div class="card"><div class="badges">'+badges.map(function(b){ return '<div class="badge '+(b[2]?"":"locked")+'">'+ic(b[0],"ico-sm")+t(b[1])+'</div>'; }).join("")+'</div></div>';
+  h+='<div class="sect" style="margin-top:16px">'+ic("wallet")+t("withdraw")+'</div>';
+  h+='<div class="card"><div class="muted" style="font-size:12px;margin-bottom:11px;display:flex;gap:6px">'+ic("info","ico-sm")+t("withdrawInfo",{min:r.minWithdrawal,rate:r.exchangeRate})+'</div><div class="field"><label>'+t("method")+'</label><select id="wMethod"><option value="Mobile Money">Mobile Money</option><option value="Crypto">Crypto (USDT)</option><option value="PayPal">PayPal</option></select></div><div class="field"><label>'+t("accDetails")+'</label><input id="wDetails" placeholder="+229 …" /></div><div class="field"><label>'+t("amount")+'</label><input id="wAmount" type="number" min="'+r.minWithdrawal+'" placeholder="'+r.minWithdrawal+'" /></div><button class="btn btn-block" onclick="App.requestWithdraw()">'+ic("wallet","ico-sm")+t("requestPayout")+'</button></div>';
+  var ws=normArr(u.withdrawals); if(ws.length){ h+='<div class="sect" style="margin-top:14px">'+ic("clock")+t("payoutRequests")+'</div>'; ws.sort(function(a,b){return b.ts-a.ts;}).forEach(function(w){ var stcl=w.status==="approved"?"up":w.status==="rejected"?"lose":"lock"; h+='<div class="card"><div class="row-between"><div><div style="font-weight:700">'+esc(w.method)+' · '+w.amount+'</div><div class="muted" style="font-size:12px">'+esc(w.details)+' · '+fmtTime(w.ts)+'</div></div><span class="pill '+stcl+'">'+esc(w.status)+'</span></div></div>'; }); }
+  return h;
+};
+</script>
+<script>
+/* ================================================================
+   13. USER ACTIONS
+   ================================================================ */
+App.claimDaily=function(){ var r=State.rules||DEFAULT_RULES, last=State.user.lastDailyClaim||0; if(now()-last<864e5){ toast(t("alreadyClaimed"),"err"); return; } var nb=(State.user.coins||0)+r.dailyReward; DBX.update("users/"+State.uid,{coins:nb,lastDailyClaim:now()}).then(function(){ haptic("medium"); toast("+"+r.dailyReward+" "+t("dailyClaimed"),"ok"); pushNotif(State.uid,"gain",t("dailyTitle"),"+"+r.dailyReward); }); };
+App.doTask=function(id){ var task=State.missions[id]; if(!task)return; var done=(State.user.completedTasks)||[];
+  var isAd=(task.url==="#ad"); // les pubs recompensees sont REPETABLES, les autres missions uniques
+  if(!isAd&&done.indexOf(id)>=0){ toast(t("alreadyDone"),"err"); return; }
+  function grant(){ var nb=(State.user.coins||0)+task.reward; var upd={coins:nb}; if(!isAd)upd.completedTasks=done.concat([id]); DBX.update("users/"+State.uid,upd).then(function(){ toast("+"+task.reward+" "+t("taskDone"),"ok"); haptic("medium"); pushNotif(State.uid,"gain",LANG==="fr"?"Récompense":"Reward",(LANG==="en"&&task.titleEn?task.titleEn:task.title)+" (+"+task.reward+")"); }); }
+  if(isAd){ toast(t("adLoading")); showRewardedAd().then(grant).catch(function(e){ console.error(e); toast(t("adFail"),"err"); }); return; }
+  if(task.url&&task.url.charAt(0)!=="#")window.open(task.url,"_blank");
+  toast(t("verifying")); setTimeout(grant,1500); };
+/* ============ MONETAG (SDK charge dans le <head> => window.show_<ZONE>) ============
+   Doc: Rewarded Interstitial = show_ZONE(); Rewarded Popup = show_ZONE('pop');
+   In-App auto = show_ZONE({type:'inApp', inAppSettings:{...}}). Toujours gerer .catch(). */
+function monetagFn(){ return (typeof window!=="undefined") ? window["show_"+MONETAG.ZONE_ID] : null; }
+function showRewardedAd(){ var f=monetagFn(); if(typeof f!=="function"){ console.warn("Monetag SDK indisponible (teste dans Telegram, pas seulement le navigateur)."); return Promise.reject(new Error("SDK Monetag indisponible")); } try{ var p=f(); return (p&&p.then)?p:Promise.resolve(); }catch(e){ return Promise.reject(e); } }
+function showRewardedPopup(){ var f=monetagFn(); if(typeof f!=="function")return Promise.reject(new Error("no sdk")); try{ var p=f('pop'); return (p&&p.then)?p:Promise.resolve(); }catch(e){ return Promise.reject(e); } }
+// Interstitiels automatiques (monetisation passive) demarres apres connexion.
+// DESACTIVE: plus de pubs automatiques In-App. Les pubs n'apparaissent QUE sur action de l'utilisateur
+// (bouton bonus video et taches recompensees). Ne rien declencher automatiquement.
+function initInAppAds(){ /* no-op volontaire */ }
+App.showAd=function(){ return showRewardedAd(); };
+// Bonus video repetable : regarder une pub recompensee pour gagner des pieces.
+App.watchAdBonus=function(){ var reward=25; toast(t("adLoading")); showRewardedAd().then(function(){ var nb=(State.user.coins||0)+reward; DBX.update("users/"+State.uid,{coins:nb}).then(function(){ toast("+"+reward+" "+t("adReward"),"ok"); haptic("medium"); pushNotif(State.uid,"gain",LANG==="fr"?"Bonus vidéo":"Video bonus","+"+reward); }); }).catch(function(e){ console.error(e); toast(t("adFail"),"err"); }); };
+App.copyRef=function(){ var i=$("refLink"); i.select(); try{document.execCommand("copy");}catch(e){} if(navigator.clipboard)navigator.clipboard.writeText(i.value); toast(t("linkCopied"),"ok"); };
+App.shareRef=function(link){ var tg="https://t.me/share/url?url="+encodeURIComponent(link)+"&text="+encodeURIComponent("DOROO FootPredictor"); try{ if(window.Telegram&&Telegram.WebApp&&Telegram.WebApp.openTelegramLink){ Telegram.WebApp.openTelegramLink(tg); return; } }catch(e){} window.open(tg,"_blank"); };
+App.countRef=function(){ DBX.read("users").then(function(all){ all=all||{}; var c=0; Object.keys(all).forEach(function(k){ if(all[k].referredBy===State.uid)c++; }); State.refCount=c; if(State.currentPage==="tasks"&&V.tab==="referral")App.renderPage(); }); };
+App.requestWithdraw=function(){ var r=State.rules||DEFAULT_RULES, method=$("wMethod").value, details=($("wDetails").value||"").trim(), amount=parseInt($("wAmount").value,10); if(!details){ toast(t("enterDetails"),"err"); return; } if(!amount||amount<r.minWithdrawal){ toast(t("minWd",{n:r.minWithdrawal}),"err"); return; } if(amount>(State.user.coins||0)){ toast(t("insufficient"),"err"); return; } var wid="w"+now()+"_"+Math.random().toString(36).slice(2,6); var rec={id:wid,uid:State.uid,username:State.user.username,method:method,details:details,amount:amount,status:"pending",ts:now()}; var nb=(State.user.coins||0)-amount; var uw=normArr(State.user.withdrawals); uw.push(rec); Promise.all([ DBX.update("users/"+State.uid,{coins:nb,withdrawals:uw}), DBX.write("withdrawals/"+wid,rec) ]).then(function(){ toast(t("wdSubmitted"),"ok"); pushNotif(State.uid,"system",t("withdraw"),amount+" · "+method); }); };
+
+/* ================================================================
+   14. PREDICTION MODAL
+   ================================================================ */
+App.openPredict=function(id){ var m=State.matches[id]; if(!m)return; if(mStatus(m)!=="upcoming"){ toast(t("lockedTooLate"),"err"); return; } var ex=myPred(id)||{}; State.predDraft={matchId:id,winner:ex.winner||null,exact:ex.exact||null,totals:ex.totals||null,btts:ex.btts||null}; var r=State.rules||DEFAULT_RULES, d=State.predDraft;
+  $("modalHost").innerHTML='<div class="overlay" onclick="if(event.target===this)App.closeModal()"><div class="modal"><div class="grab"></div>'
+    +'<h3>'+esc(m.teamA)+' <span class="vs">vs</span> '+esc(m.teamB)+'</h3><div class="muted" style="font-size:12px;margin-bottom:14px;display:flex;gap:6px;align-items:center">'+ic("clock","ico-sm")+t("kickoff")+' '+fmtTime(m.kickoff)+' · '+esc(m.league)+'</div>'
+    +'<div class="sect" style="margin:4px 0 6px">'+ic("trophy")+t("winner")+' <span class="t-gold" style="margin-left:auto">+'+r.rewardWinner+'</span></div><div class="opt-grid" id="gWinner"><div class="opt'+(d.winner==="home"?" sel":"")+'" onclick="App.pick(\'winner\',\'home\')">'+esc(m.teamA)+'<small>1</small></div><div class="opt'+(d.winner==="draw"?" sel":"")+'" onclick="App.pick(\'winner\',\'draw\')">'+t("draw")+'<small>X</small></div><div class="opt'+(d.winner==="away"?" sel":"")+'" onclick="App.pick(\'winner\',\'away\')">'+esc(m.teamB)+'<small>2</small></div></div>'
+    +'<div class="sect" style="margin:16px 0 6px">'+ic("target")+t("exactScore")+' <span class="t-gold" style="margin-left:auto">+'+r.rewardExactScore+'</span></div><div class="score-in"><input id="exA" type="number" min="0" value="'+(d.exact?d.exact.a:"")+'" placeholder="0"/><span style="font-weight:800">:</span><input id="exB" type="number" min="0" value="'+(d.exact?d.exact.b:"")+'" placeholder="0"/></div>'
+    +'<div class="sect" style="margin:16px 0 6px">'+ic("net")+t("totalGoals")+' <span class="t-gold" style="margin-left:auto">+'+r.rewardTotals+'</span></div><div class="opt-grid" id="gTotals"><div class="opt'+(d.totals==="over"?" sel":"")+'" onclick="App.pick(\'totals\',\'over\')">'+t("over")+'</div><div class="opt'+(d.totals==="under"?" sel":"")+'" onclick="App.pick(\'totals\',\'under\')">'+t("under")+'</div><div class="opt'+(d.totals==="exact25"?" sel":"")+'" onclick="App.pick(\'totals\',\'exact25\')">'+t("around")+'</div></div>'
+    +'<div class="sect" style="margin:16px 0 6px">'+ic("ball")+t("btts")+' <span class="t-gold" style="margin-left:auto">+'+r.rewardBtts+'</span></div><div class="opt-grid" style="grid-template-columns:repeat(2,1fr)" id="gBtts"><div class="opt'+(d.btts==="yes"?" sel":"")+'" onclick="App.pick(\'btts\',\'yes\')">'+t("yes")+'</div><div class="opt'+(d.btts==="no"?" sel":"")+'" onclick="App.pick(\'btts\',\'no\')">'+t("no")+'</div></div>'
+    +(r.entryFee>0?'<div class="muted center" style="font-size:12px;margin-top:12px">'+t("entryFee",{n:r.entryFee})+'</div>':'')
+    +'<button class="btn btn-block" style="margin-top:16px" onclick="App.submitPred()">'+ic("check","ico-sm")+t("submitPred")+'</button><button class="btn btn-block btn-ghost" style="margin-top:9px" onclick="App.closeModal()">'+t("cancel")+'</button></div></div>';
+};
+App.pick=function(cat,val){ var d=State.predDraft; d[cat]=d[cat]===val?null:val; mark("gWinner",d.winner,["home","draw","away"]); mark("gTotals",d.totals,["over","under","exact25"]); mark("gBtts",d.btts,["yes","no"]); };
+function mark(id,val,order){ var g=$(id); if(!g)return; Array.prototype.forEach.call(g.querySelectorAll(".opt"),function(o,i){ o.classList.toggle("sel",val===order[i]); }); }
+App.submitPred=function(){ var d=State.predDraft, m=State.matches[d.matchId]; if(mStatus(m)!=="upcoming"){ toast(t("lockedTooLate"),"err"); App.closeModal(); return; } var exA=parseInt(($("exA")||{}).value,10), exB=parseInt(($("exB")||{}).value,10); d.exact=(!isNaN(exA)&&!isNaN(exB))?{a:exA,b:exB}:null; if(!d.winner&&!d.exact&&!d.totals&&!d.btts){ toast(t("pickOne"),"err"); return; } var r=State.rules||DEFAULT_RULES; if(r.entryFee>0&&(State.user.coins||0)<r.entryFee){ toast(t("notEnoughFee"),"err"); return; } var preds=(State.user.predictions)||{}, isNew=!preds[d.matchId]; preds[d.matchId]={winner:d.winner,exact:d.exact,totals:d.totals,btts:d.btts,ts:now(),settled:false,won:false,payout:0}; var upd={predictions:preds}; if(r.entryFee>0&&isNew)upd.coins=(State.user.coins||0)-r.entryFee; if(isNew){ var st=State.user.stats||{totalPredictions:0,won:0,lost:0,winRate:0}; st.totalPredictions=(st.totalPredictions||0)+1; upd.stats=st; } DBX.update("users/"+State.uid,upd).then(function(){ haptic("medium"); toast(t("predSaved"),"ok"); App.closeModal(); }); };
+App.closeModal=function(){ $("modalHost").innerHTML=""; State.predDraft=null; };
+
+/* ================================================================
+   15. CAPTURE ?ref= + BOOT
+   ================================================================ */
+(function(){ try{ var p=new URLSearchParams(location.search), ref=p.get("ref"); if(!ref&&window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initDataUnsafe)ref=Telegram.WebApp.initDataUnsafe.start_param; if(ref)window.__REF=ref; }catch(e){} })();
+document.addEventListener("DOMContentLoaded",function(){ if(window.__REF){ var f=$("aRef"); if(f)f.value=window.__REF; } });
+App.boot();
+</script>
+</body>
+</html>

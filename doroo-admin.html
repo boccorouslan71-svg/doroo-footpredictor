@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>DOROO — Admin</title>
+
+<!-- =============================================================
+     DOROO FootPredictor — PANNEAU ADMIN (fichier 2/2)
+     -------------------------------------------------------------
+     >>> L'app joueur est dans le fichier separe : doroo-app.html
+     -------------------------------------------------------------
+     >>> OU COLLER VOS CLES :
+        [PASTE_FIREBASE_CONFIG]   -> Cles Firebase (IDENTIQUES a l'app joueur)
+        [PASTE_FOOTBALL_API_KEY]  -> Jeton football-data.org (header X-Auth-Token)
+        [PASTE_TELEGRAM_CHANNEL]  -> Lien du canal Telegram
+     -------------------------------------------------------------
+     >>> ACCES : connectez-vous avec l'utilisateur "admin".
+        Creez d'abord ce compte (admin@doroofoot.game) dans Firebase Auth,
+        puis dans la base Realtime : users/<uid>/role = "admin".
+     -------------------------------------------------------------
+     >>> HEBERGEMENT : publiez ce fichier sur une page Blogger DISTINCTE
+        (URL privee). Ajoutez son domaine aux domaines Firebase autorises.
+     ============================================================= -->
+
+<script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-database.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --primary-gradient: linear-gradient(135deg,#00d98b 0%,#00b0a0 55%,#8fd94a 100%);
+  --bg:#070b16;
+  --bg-grad: radial-gradient(1100px 500px at 10% -10%, #16305a 0%, rgba(22,48,90,0) 55%), radial-gradient(900px 500px at 100% 0%, #0d3d34 0%, rgba(13,61,52,0) 50%), linear-gradient(180deg,#0a1120 0%,#05070f 100%);
+  --text:#f4f7fb; --text-2:#8f9bb3; --text-3:#5c6780;
+  --accent:#00ff9c; --gold:#ffd24a;
+  --card: linear-gradient(160deg, rgba(24,34,58,0.92), rgba(12,18,34,0.92));
+  --card-solid:#111a2e; --glow: rgba(0,255,156,0.22);
+  --border: rgba(120,220,190,0.14); --border-strong: rgba(120,220,190,0.30);
+  --danger:#ff5d73; --warn:#ffb020; --info:#4db5ff;
+  --r:18px; --r-sm:12px; --sh: 0 10px 40px rgba(0,0,0,0.45); --side:250px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);background-image:var(--bg-grad);background-attachment:fixed;color:var(--text);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;cursor:pointer;border:none;color:inherit;}
+input,select,textarea{font-family:inherit;font-size:14px;}
+svg{display:block;}
+.ico{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.ico-sm{width:16px;height:16px;} .ico-lg{width:26px;height:26px;}
+::-webkit-scrollbar{width:8px;height:8px;} ::-webkit-scrollbar-thumb{background:rgba(0,255,156,0.2);border-radius:10px;}
+.hidden{display:none !important;} .muted{color:var(--text-2);} .t-accent{color:var(--accent);} .t-gold{color:var(--gold);} .t-danger{color:var(--danger);}
+.row{display:flex;align-items:center;gap:10px;} .row-between{display:flex;align-items:center;justify-content:space-between;gap:12px;} .wrap{flex-wrap:wrap;}
+.glass{background:rgba(17,26,46,0.6);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);border:1px solid var(--border);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);padding:18px;margin-bottom:16px;position:relative;overflow:hidden;}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 16px;border-radius:var(--r-sm);font-weight:700;font-size:14px;color:#04140d;background:var(--primary-gradient);box-shadow:0 8px 22px var(--glow);transition:transform .12s,opacity .12s;}
+.btn:active{transform:translateY(1px) scale(.99);} .btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;} .btn .ico{stroke:#04140d;}
+.btn-ghost{background:rgba(255,255,255,0.05);color:var(--text);border:1px solid var(--border);box-shadow:none;} .btn-ghost .ico{stroke:currentColor;}
+.btn-danger{background:linear-gradient(135deg,#ff5d73,#b31f45);color:#fff;box-shadow:none;} .btn-danger .ico{stroke:#fff;}
+.btn-warn{background:linear-gradient(135deg,#ffb020,#d97a00);color:#111;box-shadow:none;} .btn-warn .ico{stroke:#111;}
+.btn-sm{min-height:34px;padding:6px 12px;font-size:13px;border-radius:10px;}
+.btn-block{width:100%;}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;}
+.pill .ico{width:12px;height:12px;}
+.pill.up{background:rgba(0,255,156,0.12);color:var(--accent);border:1px solid rgba(0,255,156,0.28);}
+.pill.lock{background:rgba(255,176,32,0.12);color:var(--warn);border:1px solid rgba(255,176,32,0.28);}
+.pill.info{background:rgba(77,181,255,0.12);color:var(--info);border:1px solid rgba(77,181,255,0.28);}
+.pill.lose{background:rgba(255,93,115,0.12);color:var(--danger);border:1px solid rgba(255,93,115,0.28);}
+.field{margin-bottom:13px;} .field label{display:block;font-size:12px;color:var(--text-2);margin-bottom:6px;font-weight:600;}
+.field input,.field select,.field textarea{width:100%;padding:11px 13px;border-radius:var(--r-sm);background:rgba(255,255,255,0.035);border:1px solid var(--border);color:var(--text);outline:none;transition:border-color .15s;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);}
+.field select option{background:#0d1322;color:#fff;} .field textarea{min-height:90px;resize:vertical;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;} .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.sect{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--text-2);margin:2px 0 13px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.sect .ico{width:16px;height:16px;stroke:var(--accent);}
+.coin{display:inline-flex;align-items:center;gap:5px;font-weight:800;color:var(--gold);} .coin .ico{width:14px;height:14px;stroke:var(--gold);}
+/* loader/login */
+#loader{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:var(--bg);background-image:var(--bg-grad);z-index:9999;}
+.brand{display:flex;align-items:center;gap:11px;font-size:22px;font-weight:900;letter-spacing:.5px;}
+.brand .logo{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:var(--primary-gradient);box-shadow:0 8px 26px var(--glow);}
+.brand .logo .ico{width:24px;height:24px;stroke:#04140d;stroke-width:2.2;}
+.brand .txt{background:var(--primary-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.spinner{width:50px;height:50px;border-radius:50%;border:3px solid rgba(0,255,156,0.14);border-top-color:var(--accent);animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;}
+.login-card{width:100%;max-width:390px;}
+.login-badge{width:70px;height:70px;border-radius:20px;display:flex;align-items:center;justify-content:center;background:var(--primary-gradient);box-shadow:0 14px 40px var(--glow);margin:0 auto 14px;}
+.login-badge .ico{width:36px;height:36px;stroke:#04140d;stroke-width:2.1;}
+.lang{display:inline-flex;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:999px;padding:3px;}
+.lang button{min-height:28px;padding:2px 11px;border-radius:999px;background:transparent;color:var(--text-2);font-weight:800;font-size:12px;}
+.lang button.active{background:var(--primary-gradient);color:#04140d;}
+/* shell */
+#shell{display:none;min-height:100vh;}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--side);padding:20px 14px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;z-index:40;border-right:1px solid var(--border);}
+.sidebar .brand{font-size:18px;margin:2px 4px 18px;}
+.navlink{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:12px;color:var(--text-2);font-weight:700;font-size:14px;background:transparent;text-align:left;width:100%;transition:.14s;}
+.navlink .ico{width:19px;height:19px;}
+.navlink:hover{background:rgba(255,255,255,0.04);color:var(--text);}
+.navlink.active{background:var(--primary-gradient);color:#04140d;box-shadow:0 8px 20px var(--glow);}
+.navlink.active .ico{stroke:#04140d;}
+.navlink .badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:800;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 5px;}
+.main{margin-left:var(--side);padding:20px 24px 60px;}
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;margin:-20px -24px 20px;border-bottom:1px solid var(--border);}
+.hamb{display:none;} 
+.page-title{font-size:20px;font-weight:900;display:flex;align-items:center;gap:10px;} .page-title .ico{stroke:var(--accent);}
+/* kpi */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:6px;}
+.kpi{padding:17px;border-radius:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border);position:relative;overflow:hidden;}
+.kpi .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
+.kpi .ic .ico{width:20px;height:20px;}
+.kpi .v{font-size:26px;font-weight:900;} .kpi .l{font-size:12px;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+.chart-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
+.chart-box{position:relative;height:300px;}
+/* table */
+.tablewrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:560px;}
+th{text-align:left;padding:12px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-2);background:rgba(255,255,255,0.03);position:sticky;top:0;}
+td{padding:11px 14px;border-top:1px solid var(--border);vertical-align:middle;}
+tr:hover td{background:rgba(255,255,255,0.02);}
+.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#04140d;font-size:13px;}
+.searchbar{position:relative;display:flex;align-items:center;margin-bottom:14px;}
+.searchbar .ico{position:absolute;left:13px;stroke:var(--text-3);} .searchbar input{width:100%;padding:11px 13px 11px 40px;border-radius:12px;background:rgba(255,255,255,0.035);border:1px solid var(--border);color:var(--text);outline:none;}
+.actions{display:flex;gap:6px;flex-wrap:wrap;}
+.iconbtn{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text);}
+.iconbtn.d{color:var(--danger);border-color:rgba(255,93,115,0.3);} .iconbtn.w{color:var(--warn);border-color:rgba(255,176,32,0.3);}
+.iconbtn .ico{width:16px;height:16px;}
+/* modal */
+.overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(3,6,14,0.6);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);}
+.modal{width:100%;max-width:460px;max-height:90vh;overflow-y:auto;border-radius:20px;background:var(--card-solid);border:1px solid var(--border);padding:20px;}
+.modal h3{font-size:18px;margin-bottom:14px;display:flex;align-items:center;gap:9px;} .modal h3 .ico{stroke:var(--accent);}
+#toasts{position:fixed;left:50%;transform:translateX(-50%);top:16px;z-index:2000;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+.toast{max-width:90vw;padding:11px 15px;border-radius:12px;font-size:13px;font-weight:600;background:rgba(17,26,46,0.97);border:1px solid var(--border);box-shadow:0 10px 30px rgba(0,0,0,.45);display:flex;align-items:center;gap:9px;}
+.toast .ico{width:17px;height:17px;} .toast.ok{border-color:rgba(0,255,156,0.5);} .toast.ok .ico{stroke:var(--accent);} .toast.err{border-color:rgba(255,93,115,0.55);} .toast.err .ico{stroke:var(--danger);}
+.empty{text-align:center;color:var(--text-2);padding:40px 12px;} .empty .ico{width:44px;height:44px;stroke:var(--text-3);margin:0 auto 12px;}
+.log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,0.25);border:1px solid var(--border);margin-bottom:7px;display:flex;gap:10px;}
+.log .tm{color:var(--text-3);flex-shrink:0;} .log .ac{color:var(--accent);font-weight:700;}
+@media(max-width:900px){
+  :root{--side:0px;}
+  .sidebar{transform:translateX(-100%);transition:transform .25s;width:250px;background:var(--card-solid);} .sidebar.open{transform:none;}
+  .main{margin-left:0;padding:16px 15px 60px;} .topbar{margin:-16px -15px 16px;} .hamb{display:flex;}
+  .kpi-grid{grid-template-columns:1fr 1fr;} .chart-grid,.grid2,.grid3{grid-template-columns:1fr;}
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:35;}
+}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="brand"><span class="logo" id="loaderLogo"></span><span class="txt">DOROO</span></div>
+  <div class="spinner"></div><div class="muted" id="loaderTxt" style="font-size:13px"></div>
+</div>
+
+<div id="toasts"></div>
+
+<div id="login" class="hidden">
+  <div class="card login-card glass">
+    <div class="row-between" style="margin-bottom:6px"><span></span><div class="lang" id="loginLang"></div></div>
+    <div class="login-badge" id="loginBadge"></div>
+    <div class="brand center" style="justify-content:center;font-size:20px;margin-bottom:3px"><span class="txt">DOROO Admin</span></div>
+    <p class="muted center" id="loginTag" style="font-size:13px;margin-bottom:14px"></p>
+    <div class="row" style="gap:8px;margin-bottom:16px">
+      <button class="btn btn-sm" id="tabLogin" style="flex:1" onclick="Admin.switchAuth('login')"></button>
+      <button class="btn btn-sm btn-ghost" id="tabRegister" style="flex:1" onclick="Admin.switchAuth('register')"></button>
+    </div>
+    <div class="field"><label id="lbUser"></label><input id="lUser" value="admin" /></div>
+    <div class="field"><label id="lbPass"></label><input id="lPass" type="password" placeholder="••••••" /></div>
+    <button class="btn btn-block" id="lBtn" onclick="Admin.submit()"></button>
+    <p class="muted center" id="loginNote" style="font-size:11px;margin-top:12px"></p>
+  </div>
+</div>
+
+<div id="shell">
+  <aside class="sidebar glass" id="sidebar"><div class="brand"><span class="logo" id="sideLogo"></span><span class="txt">DOROO</span></div><div id="navlinks"></div><div style="margin-top:auto;padding-top:12px"><button class="navlink" id="logoutLink" onclick="Admin.logout()"></button></div></aside>
+  <div class="backdrop hidden" id="backdrop" onclick="Admin.toggleSide(false)"></div>
+  <main class="main">
+    <div class="topbar glass">
+      <div class="row"><button class="iconbtn hamb" onclick="Admin.toggleSide(true)" id="hambBtn"></button><div class="page-title" id="pageTitle"></div></div>
+      <div class="row"><div class="lang" id="shellLang"></div></div>
+    </div>
+    <div id="view"></div>
+  </main>
+</div>
+
+<div id="modalHost"></div>
+<script>
+/* ============ CONFIG ============ */
+// [PASTE_FIREBASE_CONFIG] --> IDENTIQUE a l'app joueur.
+var firebaseConfig = { apiKey:"AIzaSyDUNoM8TIOW9Xr-ta7riyFZQnihL5Y_oec", authDomain:"doroopro.firebaseapp.com", databaseURL:"https://doroopro-default-rtdb.europe-west1.firebasedatabase.app", projectId:"doroopro", storageBucket:"doroopro.firebasestorage.app", messagingSenderId:"113546586638", appId:"1:113546586638:web:2b62ff6aae70463ec2aa5f" };
+// [PASTE_FOOTBALL_API_KEY] --> Jeton football-data.org (header X-Auth-Token, base v4).
+// Plan gratuit: 12 grandes competitions, matchs A VENIR inclus, 10 requetes/minute.
+var FOOTBALL_API = { ENABLED:true, KEY:"2a06ecaaeb9441c5b9d575954527979a", BASE:"https://api.football-data.org/v4" };
+// [PASTE_AGNES_KEY] --> Cle Agnes AI (API compatible OpenAI). ATTENTION: cle exposee cote client.
+//   En production, faites transiter ces appels par un petit proxy serveur (voir doc Agnes).
+var AGNES = { KEY:"sk-nqg7fFfSOJpe1zKZOhaKDCVdmiRerfw17RLz1ASR0IetSjHw", BASE:"https://apihub.agnes-ai.com/v1", TEXT_MODEL:"agnes-2.0-flash", IMAGE_MODEL:"agnes-image-2.1-flash" };
+// [PASTE_MONETAG_SCRIPT] --> Zone Monetag (utilisee dans l'app joueur).
+var MONETAG = { ZONE_ID:"11423393" };
+// [PROXY CORS] Les navigateurs bloquent les appels directs a api-sports.io et Agnes (CORS).
+// On passe par un proxy public en repli. En production, mets TON propre proxy ici.
+var NET = { PROXIES: ["https://corsproxy.io/?url=", "https://api.allorigins.win/raw?url="] };
+// [PASTE_TELEGRAM_CHANNEL]
+var TELEGRAM_CHANNEL = "https://t.me/YourChannel";
+var EMAIL_DOMAIN = "@doroofoot.game";
+var DEMO_MODE = false;
+</script>
+<script>
+/* ============ FAILSAFE ANTI-BLOCAGE (independant) ============
+   Revele l'ecran de connexion quoi qu'il arrive : erreur JS, CDN
+   injoignable, ou callback Firebase qui ne se declenche pas.
+   Enregistre AVANT toute la logique. */
+(function(){
+  function reveal(){
+    var l=document.getElementById("loader"); if(!l) return;
+    if(getComputedStyle(l).display==="none") return;        // deja masque
+    var sh=document.getElementById("shell");
+    if(sh && getComputedStyle(sh).display!=="none") return; // dashboard deja affiche
+    l.style.display="none";
+    var lg=document.getElementById("login"); if(lg) lg.classList.remove("hidden");
+  }
+  window.__dorooReveal=reveal;
+  window.__dorooFailsafe=setTimeout(reveal,3500);
+  window.addEventListener("error",function(){ setTimeout(reveal,300); });
+  window.addEventListener("unhandledrejection",function(){ setTimeout(reveal,300); });
+})();
+</script>
+<script>
+/* ============ ICONS ============ */
+var ICONS={
+  ball:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5l4.3 3.1-1.6 5H9.3l-1.6-5L12 7.5z"/><path d="M12 3v4.5M4.5 9.5l3.2 1.1M19.5 9.5l-3.2 1.1M7.7 19l1.6-3.4M16.3 19l-1.6-3.4"/></svg>',
+  grid:'<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+  users:'<svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><path d="M16 5.2A3 3 0 0 1 16 11M21 20c0-2.4-1.6-4.2-4-4.8"/></svg>',
+  net:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16v12H4zM4 10h16M4 14h16M8 6v12M12 6v12M16 6v12"/></svg>',
+  scale:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 3v18M6 21h12M4 7l4-2 4 2M20 7l-4-2-4 2"/><path d="M4 7l-2 5a3 3 0 0 0 6 0L6 7zM20 7l-2 5a3 3 0 0 0 6 0l-2-5z"/></svg>',
+  target:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg>',
+  wallet:'<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14h2"/></svg>',
+  megaphone:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 10v4a1 1 0 0 0 1 1h2l8 4V5L7 9H5a1 1 0 0 0-1 1z"/><path d="M18 8a4 4 0 0 1 0 8"/></svg>',
+  cog:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>',
+  power:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.4 6.4a8 8 0 1 0 11.2 0"/></svg>',
+  coin:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.6-1-1.7-1.5-3-1.5-1.7 0-3 .9-3 2.2 0 3 6 1.3 6 4.1 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.5-3-1.5M12 6.5v11"/></svg>',
+  search:'<svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  spark:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.8 4.9L18.7 9.7l-4.9 1.8L12 16.4l-1.8-4.9L5.3 9.7l4.9-1.8L12 3z"/><path d="M18.5 14.5l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z"/></svg>',
+  image:'<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="M4 17l4.5-4.5 3.5 3.5 3-3L20 16.5"/></svg>',
+  edit:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2 2 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>',
+  ban:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
+  trash:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>',
+  plus:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  check:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg>',
+  checkCircle:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>',
+  x:'<svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  refresh:'<svg class="ico" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 4v4h-4M21 12a9 9 0 0 1-15 6.7L3 16M3 20v-4h4"/></svg>',
+  bolt:'<svg class="ico" viewBox="0 0 24 24"><path d="M13 3L5 13h5l-1 8 8-10h-5l1-8z"/></svg>',
+  gift:'<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/><path d="M12 8S10.5 3 7.8 4.2C5.9 5 6.6 8 9 8h3zM12 8s1.5-5 4.2-3.8C18.1 5 17.4 8 15 8h-3z"/></svg>',
+  info:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+  menu:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  clock:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  cloud:'<svg class="ico" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.3A3.5 3.5 0 0 1 18 18H7z"/><path d="M12 12v5M9.5 14.5L12 12l2.5 2.5"/></svg>',
+  save:'<svg class="ico" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7M8 20v-6h8v6"/></svg>',
+  trophy:'<svg class="ico" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 5H5v2a3 3 0 0 0 3 3M16 5h3v2a3 3 0 0 1-3 3"/><path d="M12 13v4M9 20h6M10 20v-3h4v3"/></svg>',
+  flag:'<svg class="ico" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+  list:'<svg class="ico" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>'
+};
+function ic(n,cls){ var s=ICONS[n]||ICONS.info; if(cls)s=s.replace('class="ico"','class="ico '+cls+'"'); return s; }
+
+/* ============ i18n ============ */
+var LANG=localStorage.getItem("doroo_lang")||"fr";
+var STR={
+ fr:{ loading:"Chargement du tableau de bord…", loginTag:"Espace réservé aux administrateurs", username:"Nom d'utilisateur", password:"Mot de passe", signIn:"Se connecter", loginNote:"Connecte-toi avec le compte admin (admin@doroofoot.game).", logout:"Déconnexion",
+   notAdmin:"Accès refusé : ce compte n'est pas administrateur.", loginFail:"Échec de connexion.", enterPass:"Saisis le mot de passe.", enterUser:"Saisis un nom d'utilisateur.", tabLogin:"Connexion", tabRegister:"Inscription", signUp:"Créer le compte admin", registerNote:"Première utilisation : crée le compte admin, puis sécurise tes règles Firebase.", regSuccess:"Compte admin créé. Bienvenue !", regFail:"Échec de l'inscription.", weakPass:"Mot de passe : 6 caractères minimum.",
+   nav_dashboard:"Tableau de bord", nav_users:"Utilisateurs", nav_matches:"Matchs & API", nav_rewards:"Récompenses & Règles", nav_missions:"Missions", nav_withdrawals:"Retraits", nav_broadcast:"Diffusion", nav_settings:"Paramètres & Journaux",
+   kpi_users:"Utilisateurs", kpi_coins:"Pièces en circulation", kpi_preds:"Pronostics", kpi_pending:"Retraits en attente",
+   topPredictors:"Top 10 pronostiqueurs", wdStatus:"Statut des retraits", pending:"En attente", approved:"Approuvés", rejected:"Rejetés", noData:"Pas encore de données",
+   searchUsers:"Rechercher par nom…", user:"Utilisateur", balance:"Solde", predictions:"Pronostics", wins:"Victoires", status:"Statut", actions:"Actions", active:"Actif", banned:"Banni", noUsers:"Aucun utilisateur.",
+   editBalance:"Modifier le solde", newBalance:"Nouveau solde (pièces)", save:"Enregistrer", cancel:"Annuler", confirmDelete:"Supprimer cet utilisateur définitivement ?", userUpdated:"Utilisateur mis à jour", userDeleted:"Utilisateur supprimé", userBanned:"Utilisateur banni", userUnbanned:"Bannissement levé",
+   apiSync:"Synchroniser via football-data.org", apiDisabled:"API désactivée — active-la dans Paramètres (ou colle ton jeton).", createMatch:"Créer un match", manualMatch:"Match manuel", apiSearchTitle:"Recherche automatique (football-data.org)", daysAhead:"Prochains matchs", btnSearchMatches:"Rechercher les matchs", btnAIfill:"Remplir avec l'IA", createForm:"Créer le match", createMatchBtn:"Créer le match", genThumb:"Générer une miniature IA (fond football, sans texte)", availableFound:"{n} matchs trouvés", noAvailable:"Aucun match chargé. Lance une recherche ou l'IA.", searching:"Recherche des matchs…", use:"Utiliser", used:"Utilisé", formFilled:"Formulaire rempli", aiThinking:"L'IA analyse les matchs…", aiFilled:"L'IA a rempli les champs. Vérifie puis crée.", aiError:"L'IA n'a pas pu remplir. Réessaie.", apiError:"Erreur football-data.org (jeton / quota / réseau).", thumbGen:"Génération de la miniature IA…", thumbDone:"Miniature générée", thumbError:"Échec de génération de la miniature", aiFallback:"IA indisponible — proposition locale variée insérée. Vérifie avant de créer.", sourceLabel:"Source :", verifiedApi:"Vérifié · API", unverifiedAi:"IA · à vérifier", manualEntry:"Saisie manuelle", kickoffPast:"Attention : le coup d'envoi est dans le passé.",
+   teamA:"Équipe A (domicile)", teamB:"Équipe B (extérieur)", league:"Championnat", kickoff:"Coup d'envoi", colorA:"Couleur A", colorB:"Couleur B", add:"Ajouter", matchAdded:"Match ajouté",
+   allMatches:"Tous les matchs", setResult:"Définir le résultat", settle:"Régler les pronostics", result:"Résultat", scoreA:"Score équipe A", scoreB:"Score équipe B", saveResult:"Enregistrer le résultat", resultSaved:"Résultat enregistré", noMatches:"Aucun match. Crées-en un.",
+   settleDone:"pronostics réglés, pièces créditées", needResult:"Définis d'abord le résultat.",
+   rulesTitle:"Récompenses & Économie", dailyReward:"Récompense quotidienne", referralBonus:"Bonus de parrainage", exchangeRate:"Taux (pièces = 1 unité)", minWithdrawal:"Retrait minimum", entryFee:"Frais d'entrée / pronostic", rewardWinner:"Gain · Vainqueur", rewardExact:"Gain · Score exact", rewardTotals:"Gain · Total de buts", rewardBtts:"Gain · BTTS", saveRules:"Enregistrer les règles", rulesSaved:"Règles enregistrées",
+   missionsTitle:"Missions", newMission:"Nouvelle mission", missionTitleFr:"Titre (FR)", missionTitleEn:"Titre (EN)", reward:"Récompense", link:"Lien / action (#ad, #predict, URL)", activeQ:"Active", missionSaved:"Mission enregistrée", missionDeleted:"Mission supprimée", noMissions:"Aucune mission.", edit:"Modifier",
+   wdTitle:"Demandes de retrait", amount:"Montant", method:"Méthode", details:"Détails", date:"Date", approve:"Approuver", reject:"Rejeter", noWd:"Aucune demande.", approveConfirm:"Approuver ce retrait ?", rejectConfirm:"Rejeter et rembourser les pièces ?", wdApproved:"Retrait approuvé", wdRejected:"Retrait rejeté, pièces remboursées",
+   bcTitle:"Diffuser une notification", bcTitleField:"Titre", bcMsg:"Message", bcImg:"Image (URL, optionnel)", bcSend:"Envoyer à tous", bcSent:"Notification envoyée à {n} utilisateurs", bcEmpty:"Renseigne un titre et un message.",
+   setTitle:"Paramètres système", tgChannel:"Canal Telegram", monetagZone:"Zone Monetag", apiEnabled:"Activer l'API Football", apiKey:"Clé API Football", saveSettings:"Enregistrer les paramètres", settingsSaved:"Paramètres enregistrés", logs:"Journal des actions", noLogs:"Aucune action enregistrée.", clearLogs:"Vider le journal" },
+ en:{ loading:"Loading dashboard…", loginTag:"Administrators only", username:"Username", password:"Password", signIn:"Sign In", loginNote:"Sign in with the admin account (admin@doroofoot.game).", logout:"Log out",
+   notAdmin:"Access denied: this account is not an admin.", loginFail:"Login failed.", enterPass:"Enter the password.", enterUser:"Enter a username.", tabLogin:"Sign In", tabRegister:"Sign Up", signUp:"Create admin account", registerNote:"First run: create the admin account, then secure your Firebase rules.", regSuccess:"Admin account created. Welcome!", regFail:"Sign up failed.", weakPass:"Password: 6 characters minimum.",
+   nav_dashboard:"Dashboard", nav_users:"Users", nav_matches:"Matches & API", nav_rewards:"Rewards & Rules", nav_missions:"Missions", nav_withdrawals:"Withdrawals", nav_broadcast:"Broadcast", nav_settings:"Settings & Logs",
+   kpi_users:"Users", kpi_coins:"Coins in circulation", kpi_preds:"Predictions", kpi_pending:"Pending payouts",
+   topPredictors:"Top 10 Predictors", wdStatus:"Withdrawal status", pending:"Pending", approved:"Approved", rejected:"Rejected", noData:"No data yet",
+   searchUsers:"Search by name…", user:"User", balance:"Balance", predictions:"Predictions", wins:"Wins", status:"Status", actions:"Actions", active:"Active", banned:"Banned", noUsers:"No users.",
+   editBalance:"Edit balance", newBalance:"New balance (coins)", save:"Save", cancel:"Cancel", confirmDelete:"Permanently delete this user?", userUpdated:"User updated", userDeleted:"User deleted", userBanned:"User banned", userUnbanned:"User unbanned",
+   apiSync:"Sync via football-data.org", apiDisabled:"API disabled — enable it in Settings (or paste your token).", createMatch:"Create match", manualMatch:"Manual match", apiSearchTitle:"Automatic search (football-data.org)", daysAhead:"Next matches", btnSearchMatches:"Search matches", btnAIfill:"Fill with AI", createForm:"Create the match", createMatchBtn:"Create match", genThumb:"Generate AI thumbnail (football background, no text)", availableFound:"{n} matches found", noAvailable:"No matches loaded. Run a search or the AI.", searching:"Searching matches…", use:"Use", used:"Used", formFilled:"Form filled", aiThinking:"AI is analyzing matches…", aiFilled:"AI filled the fields. Review then create.", aiError:"AI could not fill. Try again.", apiError:"football-data.org error (token / quota / network).", thumbGen:"Generating AI thumbnail…", thumbDone:"Thumbnail generated", thumbError:"Thumbnail generation failed", aiFallback:"AI unavailable — inserted a varied local suggestion. Review before creating.", sourceLabel:"Source:", verifiedApi:"Verified · API", unverifiedAi:"AI · to verify", manualEntry:"Manual entry", kickoffPast:"Warning: kickoff time is in the past.",
+   teamA:"Team A (home)", teamB:"Team B (away)", league:"League", kickoff:"Kickoff", colorA:"Color A", colorB:"Color B", add:"Add", matchAdded:"Match added",
+   allMatches:"All matches", setResult:"Set result", settle:"Settle predictions", result:"Result", scoreA:"Team A score", scoreB:"Team B score", saveResult:"Save result", resultSaved:"Result saved", noMatches:"No matches. Create one.",
+   settleDone:"predictions settled, coins credited", needResult:"Set the result first.",
+   rulesTitle:"Rewards & Economy", dailyReward:"Daily reward", referralBonus:"Referral bonus", exchangeRate:"Rate (coins = 1 unit)", minWithdrawal:"Minimum withdrawal", entryFee:"Entry fee / prediction", rewardWinner:"Reward · Winner", rewardExact:"Reward · Exact score", rewardTotals:"Reward · Total goals", rewardBtts:"Reward · BTTS", saveRules:"Save rules", rulesSaved:"Rules saved",
+   missionsTitle:"Missions", newMission:"New mission", missionTitleFr:"Title (FR)", missionTitleEn:"Title (EN)", reward:"Reward", link:"Link / action (#ad, #predict, URL)", activeQ:"Active", missionSaved:"Mission saved", missionDeleted:"Mission deleted", noMissions:"No missions.", edit:"Edit",
+   wdTitle:"Withdrawal requests", amount:"Amount", method:"Method", details:"Details", date:"Date", approve:"Approve", reject:"Reject", noWd:"No requests.", approveConfirm:"Approve this withdrawal?", rejectConfirm:"Reject and refund the coins?", wdApproved:"Withdrawal approved", wdRejected:"Withdrawal rejected, coins refunded",
+   bcTitle:"Broadcast a notification", bcTitleField:"Title", bcMsg:"Message", bcImg:"Image (URL, optional)", bcSend:"Send to all", bcSent:"Notification sent to {n} users", bcEmpty:"Provide a title and a message.",
+   setTitle:"System settings", tgChannel:"Telegram channel", monetagZone:"Monetag zone", apiEnabled:"Enable Football API", apiKey:"Football API key", saveSettings:"Save settings", settingsSaved:"Settings saved", logs:"Action log", noLogs:"No actions logged.", clearLogs:"Clear log" }
+};
+function t(k,vars){ var s=(STR[LANG]&&STR[LANG][k])||STR.fr[k]||k; if(vars)Object.keys(vars).forEach(function(v){s=s.replace("{"+v+"}",vars[v]);}); return s; }
+function setLang(l){ LANG=l; localStorage.setItem("doroo_lang",l); document.documentElement.lang=l; renderLangSwitch(); applyStatic(); if(Admin.ready){ buildNav(); Admin.render(); } }
+function renderLangSwitch(){ var html='<button class="'+(LANG==="fr"?"active":"")+'" onclick="setLang(\'fr\')">FR</button><button class="'+(LANG==="en"?"active":"")+'" onclick="setLang(\'en\')">EN</button>'; ["loginLang","shellLang"].forEach(function(id){ var e=$(id); if(e)e.innerHTML=html; }); }
+function applyStatic(){ $("loaderTxt").textContent=t("loading"); $("loginTag").textContent=t("loginTag"); $("lbUser").textContent=t("username"); $("lbPass").textContent=t("password"); $("lBtn").innerHTML=ic("power","ico-sm")+t("signIn"); $("loginNote").textContent=t("loginNote"); var ll=$("logoutLink"); if(ll)ll.innerHTML=ic("power")+t("logout"); var hb=$("hambBtn"); if(hb)hb.innerHTML=ic("menu","ico-sm"); var tl=$("tabLogin"),tr=$("tabRegister"); if(tl)tl.textContent=t("tabLogin"); if(tr)tr.textContent=t("tabRegister"); if(window.Admin&&Admin.switchAuth&&Admin.authMode)Admin.switchAuth(Admin.authMode); }
+</script>
+<script>
+/* ============ STATE / DEFAULTS ============ */
+var State={ uid:null, users:{}, matches:{}, rules:null, missions:{}, withdrawals:{}, system:null, logs:[], page:"dashboard", search:"", available:[], loadingApi:false, aiOdds:null, editUser:null, editMission:null, resultMatch:null, formSource:"manual", aiRecent:[] };
+var DEFAULT_RULES={ dailyReward:50, referralBonus:100, exchangeRate:1000, minWithdrawal:5000, entryFee:0, rewardWinner:60, rewardExactScore:250, rewardTotals:80, rewardBtts:70 };
+var DEFAULT_SYSTEM={ telegramChannel:TELEGRAM_CHANNEL, monetagZone:"", apiEnabled:false, apiKey:"" };
+var DEMO={ users:{}, matches:{}, withdrawals:{}, config:{}, logs:{} };
+var charts={};
+
+/* ============ FIREBASE ============ */
+var auth=null, db=null;
+try{ if(firebaseConfig.apiKey&&firebaseConfig.apiKey!=="YOUR_API_KEY"){ firebase.initializeApp(firebaseConfig); auth=firebase.auth(); db=firebase.database(); } else { DEMO_MODE=true; console.warn("[DOROO-ADMIN] Mode DEMO local."); } }catch(e){ DEMO_MODE=true; console.error(e); }
+
+/* ============ HELPERS ============ */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>\"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;","'":"&#39;"}[c];}); }
+function now(){ return Date.now(); }
+function fmtTime(ts){ if(!ts)return "—"; return new Date(ts).toLocaleString(LANG==="fr"?"fr-FR":"en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}); }
+function normArr(a){ if(!a)return []; if(Array.isArray(a))return a.filter(Boolean); return Object.keys(a).map(function(k){return a[k];}); }
+function avatarColor(name){ var h=0; name=name||"?"; for(var i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h); var hue=Math.abs(h)%360; return "linear-gradient(135deg,hsl("+hue+",70%,55%),hsl("+((hue+40)%360)+",70%,45%))"; }
+function toast(msg,type){ var i=type==="ok"?ic("checkCircle"):type==="err"?ic("info"):ic("info"); var e=document.createElement("div"); e.className="toast "+(type||""); e.innerHTML=i+"<span>"+esc(msg)+"</span>"; $("toasts").appendChild(e); setTimeout(function(){ e.style.opacity="0"; e.style.transition="opacity .25s"; setTimeout(function(){e.remove();},250); },2600); }
+
+var DBX={
+  read:function(p){ if(!DEMO_MODE)return db.ref(p).once("value").then(function(s){return s.val();}); return Promise.resolve(demoRead(p)); },
+  write:function(p,v){ if(!DEMO_MODE)return db.ref(p).set(v); demoWrite(p,v); return Promise.resolve(); },
+  update:function(p,v){ if(!DEMO_MODE)return db.ref(p).update(v); var c=demoRead(p)||{}; Object.keys(v).forEach(function(k){c[k]=v[k];}); demoWrite(p,c); return Promise.resolve(); },
+  remove:function(p){ if(!DEMO_MODE)return db.ref(p).remove(); demoRemove(p); return Promise.resolve(); },
+  onValue:function(p,cb){ if(!DEMO_MODE){ db.ref(p).on("value",function(s){cb(s.val());}); } else cb(demoRead(p)); }
+};
+function demoRead(p){ var a=p.split("/"),o=DEMO; for(var i=0;i<a.length;i++){ if(o==null)return null; o=o[a[i]]; } return o===undefined?null:o; }
+function demoWrite(p,v){ var a=p.split("/"),o=DEMO; for(var i=0;i<a.length-1;i++){ if(o[a[i]]==null)o[a[i]]={}; o=o[a[i]]; } o[a[a.length-1]]=v; }
+function demoRemove(p){ var a=p.split("/"),o=DEMO; for(var i=0;i<a.length-1;i++){ if(o[a[i]]==null)return; o=o[a[i]]; } delete o[a[a.length-1]]; }
+function seedDemo(){ if(!DEMO_MODE)return; if(!DEMO.config.rules)demoWrite("config/rules",DEFAULT_RULES); if(!DEMO.config.system)demoWrite("config/system",DEFAULT_SYSTEM); if(Object.keys(DEMO.users).length===0){ var names=["kwame","amina","jordan","fatou","leo"]; names.forEach(function(n,i){ demoWrite("users/demo_"+n,{ username:n, coins:(i+1)*450, stats:{totalPredictions:(i+1)*3,won:(i+1)*2,lost:i,winRate:0}, predictions:{}, referralCode:"DR"+n.toUpperCase(), completedTasks:[], notifications:[], withdrawals:[], banned:false, joinDate:new Date(now()-i*864e5).toISOString() }); }); demoWrite("withdrawals/w1",{id:"w1",uid:"demo_kwame",username:"kwame",method:"Mobile Money",details:"+22990000000",amount:5000,status:"pending",ts:now()-3600000}); demoWrite("withdrawals/w2",{id:"w2",uid:"demo_amina",username:"amina",method:"PayPal",details:"amina@mail.com",amount:6000,status:"approved",ts:now()-9e6}); } if(Object.keys(DEMO.matches).length===0){ var base=now(),H=36e5; demoWrite("matches",{ m101:{id:"m101",league:"Premier League",teamA:"Arsenal",teamAColor:"#EF0107",teamB:"Chelsea",teamBColor:"#034694",kickoff:base+4*H,status:"upcoming",result:null,odds:{home:2.1,draw:3.3,away:2.9}}, m201:{id:"m201",league:"La Liga",teamA:"Real Madrid",teamAColor:"#FEBE10",teamB:"Barcelona",teamBColor:"#A50044",kickoff:base-2*H,status:"locked",result:null,odds:{home:2.4,draw:3.1,away:2.7}} }); } }
+function logAction(action,detail){ var entry={action:action,detail:detail,ts:now(),by:"admin"}; return DBX.read("logs").then(function(l){ l=normArr(l); l.unshift(entry); if(l.length>100)l=l.slice(0,100); return DBX.write("logs",l); }); }
+function pushNotifTo(uid,type,title,msg,img){ return DBX.read("users/"+uid+"/notifications").then(function(l){ l=normArr(l); l.unshift({type:type,title:title,message:msg,image:img||null,ts:now(),read:false}); if(l.length>50)l=l.slice(0,50); return DBX.write("users/"+uid+"/notifications",l); }); }
+
+/* ============ FOOTBALL-DATA.ORG (v4, header X-Auth-Token) ============
+   Base: https://api.football-data.org/v4 | Plan gratuit: matchs a venir inclus, 10 req/min. */
+// smartFetch: essaie l'appel direct, puis retombe sur les proxys CORS en cas d'echec.
+function smartFetch(url,options){ options=options||{}; return fetch(url,options).catch(function(err){ var proxies=(NET&&NET.PROXIES)||[]; var i=-1; function nxt(){ i++; if(i>=proxies.length)return Promise.reject(err); return fetch(proxies[i]+encodeURIComponent(url),options).catch(nxt); } return nxt(); }); }
+function apiFootball(path){ if(!FOOTBALL_API.ENABLED||!FOOTBALL_API.KEY||FOOTBALL_API.KEY.indexOf("YOUR_")===0){ return Promise.reject(new Error("API desactivee")); } return smartFetch(FOOTBALL_API.BASE+path,{ headers:{ "X-Auth-Token":FOOTBALL_API.KEY } }).then(function(r){ return r.json(); }); }
+// Codes competitions football-data.org (plan GRATUIT uniquement) proposes dans le selecteur.
+var LEAGUES=[ {id:"PL",name:"Premier League",country:"England"}, {id:"PD",name:"La Liga",country:"Spain"}, {id:"SA",name:"Serie A",country:"Italy"}, {id:"BL1",name:"Bundesliga",country:"Germany"}, {id:"FL1",name:"Ligue 1",country:"France"}, {id:"CL",name:"UEFA Champions League",country:"Europe"}, {id:"DED",name:"Eredivisie",country:"Netherlands"}, {id:"PPL",name:"Primeira Liga",country:"Portugal"}, {id:"ELC",name:"Championship",country:"England"}, {id:"BSA",name:"Serie A (Bresil)",country:"Brazil"} ];
+function currentSeason(){ var d=new Date(); return (d.getMonth()>=6)?d.getFullYear():d.getFullYear()-1; }
+// Pool local de secours (affiches reelles + couleurs officielles) — pioche ALEATOIRE, jamais le meme match.
+var FALLBACK_FIXTURES=[
+ {league:"Premier League",teamA:"Arsenal",teamAColor:"#EF0107",teamB:"Manchester City",teamBColor:"#6CABDD"},
+ {league:"Premier League",teamA:"Liverpool",teamAColor:"#C8102E",teamB:"Tottenham",teamBColor:"#132257"},
+ {league:"Premier League",teamA:"Chelsea",teamAColor:"#034694",teamB:"Newcastle",teamBColor:"#241F20"},
+ {league:"La Liga",teamA:"Real Madrid",teamAColor:"#FEBE10",teamB:"Sevilla",teamBColor:"#D80027"},
+ {league:"La Liga",teamA:"Barcelona",teamAColor:"#A50044",teamB:"Atletico Madrid",teamBColor:"#CB3524"},
+ {league:"La Liga",teamA:"Real Sociedad",teamAColor:"#0067B1",teamB:"Villarreal",teamBColor:"#FFE667"},
+ {league:"Serie A",teamA:"Inter",teamAColor:"#0068A8",teamB:"Juventus",teamBColor:"#111111"},
+ {league:"Serie A",teamA:"AC Milan",teamAColor:"#FB090B",teamB:"Napoli",teamBColor:"#12A0D7"},
+ {league:"Serie A",teamA:"Roma",teamAColor:"#8E1F2F",teamB:"Lazio",teamBColor:"#87D8F7"},
+ {league:"Bundesliga",teamA:"Bayern Munich",teamAColor:"#DC052D",teamB:"Borussia Dortmund",teamBColor:"#FDE100"},
+ {league:"Bundesliga",teamA:"RB Leipzig",teamAColor:"#DD0741",teamB:"Bayer Leverkusen",teamBColor:"#E32219"},
+ {league:"Ligue 1",teamA:"Paris Saint-Germain",teamAColor:"#004170",teamB:"Marseille",teamBColor:"#2FAEE0"},
+ {league:"Ligue 1",teamA:"Monaco",teamAColor:"#E51B22",teamB:"Lyon",teamBColor:"#1B458F"},
+ {league:"UEFA Champions League",teamA:"Manchester City",teamAColor:"#6CABDD",teamB:"Real Madrid",teamBColor:"#FEBE10"},
+ {league:"UEFA Champions League",teamA:"Bayern Munich",teamAColor:"#DC052D",teamB:"Paris Saint-Germain",teamBColor:"#004170"},
+ {league:"Primeira Liga",teamA:"Benfica",teamAColor:"#E30613",teamB:"Porto",teamBColor:"#00428C"},
+ {league:"Eredivisie",teamA:"Ajax",teamAColor:"#D2122E",teamB:"PSV",teamBColor:"#ED1C24"},
+ {league:"Super Lig",teamA:"Galatasaray",teamAColor:"#A90432",teamB:"Fenerbahce",teamBColor:"#154193"}
+];
+function keyOf(a,b){ return ((a||"")+"|"+(b||"")).toLowerCase(); }
+function pickFallbackFixture(excl){ excl=excl||{}; var pool=FALLBACK_FIXTURES.filter(function(f){ return !excl[keyOf(f.teamA,f.teamB)]&&!excl[keyOf(f.teamB,f.teamA)]; }); if(!pool.length)pool=FALLBACK_FIXTURES; var f=pool[Math.floor(Math.random()*pool.length)]; var kickoff=now()+(1+Math.floor(Math.random()*6))*864e5+Math.floor(Math.random()*8)*36e5; return { league:f.league, teamA:f.teamA, teamB:f.teamB, teamAColor:f.teamAColor, teamBColor:f.teamBColor, kickoff:new Date(kickoff).toISOString(), oddsHome:+(1.7+Math.random()*1.6).toFixed(2), oddsDraw:+(3.0+Math.random()*0.8).toFixed(2), oddsAway:+(1.9+Math.random()*1.8).toFixed(2) }; }
+
+/* ============ AGNES AI (API compatible OpenAI) ============
+   SECURITE: la cle est cote client car l'app est un fichier unique Blogger.
+   En production, proxifiez /chat/completions et /images/generations cote serveur. */
+function agnesChat(messages,opts){ opts=opts||{}; return smartFetch(AGNES.BASE+"/chat/completions",{ method:"POST", headers:{ "Authorization":"Bearer "+AGNES.KEY, "Content-Type":"application/json" }, body:JSON.stringify({ model:AGNES.TEXT_MODEL, messages:messages, temperature:(opts.temperature!=null?opts.temperature:0.4) }) }).then(function(r){ return r.json(); }).then(function(d){ return (d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||""; }); }
+function agnesImage(prompt){ return smartFetch(AGNES.BASE+"/images/generations",{ method:"POST", headers:{ "Authorization":"Bearer "+AGNES.KEY, "Content-Type":"application/json" }, body:JSON.stringify({ model:AGNES.IMAGE_MODEL, prompt:prompt, n:1, size:"1024x576" }) }).then(function(r){ return r.json(); }).then(function(d){ var it=(d&&d.data&&d.data[0])||{}; if(it.url)return it.url; if(it.b64_json)return "data:image/png;base64,"+it.b64_json; return null; }); }
+
+/* --- PROMPTS IA (roles detailles pour des resultats pro) --- */
+// 1) Choix + remplissage d'un match a partir des fixtures reelles disponibles.
+var AI_MATCH_SYSTEM = [
+ "Tu es l'assistant editorial de DOROO FootPredictor, une mini-app de pronostics football.",
+ "Mission: si une liste de matchs reels a venir est fournie, choisis-en UN dedans; sinon propose UN match reel plausible a venir.",
+ "IMPERATIF DE VARIETE: ne repete JAMAIS un match deja propose ou publie (liste 'a exclure' fournie).",
+ "Change de championnat et d'equipes a chaque appel. N'utilise PAS toujours les memes affiches iconiques (evite Manchester vs Liverpool par defaut).",
+ "Renvoie STRICTEMENT un objet JSON valide, sans aucun texte autour, avec EXACTEMENT ces cles:",
+ '{ "league": string, "teamA": string, "teamB": string, "teamAColor": "#RRGGBB", "teamBColor": "#RRGGBB", "kickoff": "ISO-8601", "oddsHome": number, "oddsDraw": number, "oddsAway": number }.',
+ "Regles: teamA = equipe a domicile, teamB = exterieur. Les couleurs = couleurs officielles principales des clubs.",
+ "Les cotes doivent etre realistes (1.2 a 8.0) et coherentes entre elles. kickoff doit etre dans le futur.",
+ "Reponds uniquement avec le JSON, rien d'autre."
+].join(" ");
+// 2) Prompt de generation de la miniature de fond (football, AUCUN texte).
+function thumbnailPrompt(m){ return [
+ "Cinematic, ultra-realistic football (soccer) stadium atmosphere background, wide 16:9 sports banner.",
+ "Dramatic evening floodlights, lush green pitch, dynamic depth of field, vibrant emerald-green and dark navy color grading matching a premium sports app.",
+ "Sense of a big rivalry match ambiance ("+m.teamA+" vs "+m.teamB+", "+m.league+"), energetic blurred crowd bokeh in the background.",
+ "Modern, professional, high contrast, dramatic lighting, no recognizable faces.",
+ "ABSOLUTELY NO TEXT, NO LETTERS, NO NUMBERS, NO TYPOGRAPHY, NO LOGOS, NO WATERMARK anywhere in the image."
+].join(" "); }
+
+/* ============ ADMIN CORE ============ */
+var Admin={ ready:false };
+Admin.boot=function(){ $("loaderLogo").innerHTML=ic("ball"); $("loginBadge").innerHTML=ic("cog"); $("sideLogo").innerHTML=ic("ball"); document.documentElement.lang=LANG; renderLangSwitch(); applyStatic(); seedDemo();
+  var settled=false; function fallback(){ if(settled)return; settled=true; Admin.showLogin(); }
+  setTimeout(fallback,6000); // filet de securite anti-blocage sur le loader
+  try{
+    if(!DEMO_MODE&&auth){ auth.onAuthStateChanged(function(u){ if(u){ if(Admin.registering)return; DBX.read("users/"+u.uid).then(function(rec){ settled=true; if(rec&&(rec.role==="admin"||rec.username==="admin")){ Admin.start(u.uid); } else if(rec){ toast(t("notAdmin"),"err"); auth.signOut(); Admin.showLogin(); } else { /* connecte mais profil introuvable/lecture refusee: regles Realtime DB a corriger */ toast(t("notAdmin")+" (users/"+u.uid+" — "+(LANG==="fr"?"profil introuvable ou lecture refusee: verifie les regles Realtime Database":"missing profile or read denied: check Realtime Database rules")+")","err"); auth.signOut(); Admin.showLogin(); } }).catch(function(e){ console.error(e); settled=true; toast("Firebase: "+((e&&e.message)||t("loginFail")),"err"); try{auth.signOut();}catch(_){} Admin.showLogin(); }); } else { settled=true; Admin.showLogin(); } }, function(e){ console.error(e); fallback(); }); }
+    else { settled=true; Admin.showLogin(); }
+  }catch(e){ console.error(e); fallback(); }
+};
+Admin.showLogin=function(){ $("loader").classList.add("hidden"); $("shell").style.display="none"; $("login").classList.remove("hidden"); };
+Admin.authMode="login"; Admin.registering=false;
+Admin.switchAuth=function(m){ Admin.authMode=m;
+  var tl=$("tabLogin"), tr=$("tabRegister");
+  if(tl)tl.className="btn btn-sm"+(m==="login"?"":" btn-ghost");
+  if(tr)tr.className="btn btn-sm"+(m==="register"?"":" btn-ghost");
+  var b=$("lBtn"); if(b){ b.innerHTML=ic(m==="login"?"power":"plus","ico-sm")+(m==="login"?t("signIn"):t("signUp")); b.disabled=false; }
+  var n=$("loginNote"); if(n)n.textContent=(m==="login"?t("loginNote"):t("registerNote"));
+};
+Admin.submit=function(){ if(Admin.authMode==="register")Admin.register(); else Admin.login(); };
+Admin.login=function(){ var u=($("lUser").value||"").trim().toLowerCase(), p=$("lPass").value; if(!p){ toast(t("enterPass"),"err"); return; } $("lBtn").disabled=true;
+  if(DEMO_MODE){ Admin.start("admin_demo"); return; }
+  auth.signInWithEmailAndPassword(u+EMAIL_DOMAIN,p).catch(function(e){ toast(e.message||t("loginFail"),"err"); $("lBtn").disabled=false; }); };
+Admin.register=function(){ var u=($("lUser").value||"").trim().toLowerCase(), p=$("lPass").value;
+  if(!u){ toast(t("enterUser"),"err"); return; }
+  if(!p||p.length<6){ toast(t("weakPass"),"err"); return; }
+  $("lBtn").disabled=true;
+  if(DEMO_MODE){ Admin.start("admin_demo"); return; }
+  Admin.registering=true;
+  auth.createUserWithEmailAndPassword(u+EMAIL_DOMAIN,p).then(function(cred){
+    var uid=cred.user.uid;
+    return DBX.write("users/"+uid,{ username:u, role:"admin", coins:0, stats:{totalPredictions:0,won:0,lost:0,winRate:0}, predictions:{}, completedTasks:[], notifications:[], withdrawals:[], banned:false, joinDate:new Date().toISOString() })
+      .then(function(){ Admin.registering=false; toast(t("regSuccess"),"ok"); try{logAction("ADMIN_REGISTER",u);}catch(_){} Admin.start(uid); });
+  }).catch(function(e){ Admin.registering=false; console.error(e); toast(e.message||t("regFail"),"err"); $("lBtn").disabled=false; }); };
+Admin.logout=function(){ if(!DEMO_MODE&&auth)auth.signOut(); location.reload(); };
+Admin.start=function(uid){ State.uid=uid; Admin.ready=true; $("loader").classList.add("hidden"); $("login").classList.add("hidden"); $("shell").style.display="block";
+  DBX.onValue("users",function(v){ State.users=v||{}; if(["dashboard","users"].indexOf(State.page)>=0)Admin.render(); });
+  DBX.onValue("matches",function(v){ State.matches=v||{}; if(["dashboard","matches"].indexOf(State.page)>=0)Admin.render(); });
+  DBX.onValue("withdrawals",function(v){ State.withdrawals=v||{}; buildNav(); if(["dashboard","withdrawals"].indexOf(State.page)>=0)Admin.render(); });
+  DBX.onValue("config/rules",function(v){ State.rules=v||DEFAULT_RULES; });
+  DBX.onValue("config/missions",function(v){ State.missions=v||{}; if(State.page==="missions")Admin.render(); });
+  DBX.onValue("config/system",function(v){ State.system=v||DEFAULT_SYSTEM; });
+  DBX.onValue("logs",function(v){ State.logs=normArr(v); if(State.page==="settings")Admin.render(); });
+  buildNav(); Admin.go("dashboard");
+};
+Admin.toggleSide=function(open){ $("sidebar").classList.toggle("open",open); $("backdrop").classList.toggle("hidden",!open); };
+
+/* ============ NAV ============ */
+var NAV=[["dashboard","grid"],["users","users"],["matches","net"],["rewards","scale"],["missions","gift"],["withdrawals","wallet"],["broadcast","megaphone"],["settings","cog"]];
+function buildNav(){ var pending=normArr(State.withdrawals).filter(function(w){return w.status==="pending";}).length;
+  $("navlinks").innerHTML=NAV.map(function(n){ var badge=(n[0]==="withdrawals"&&pending>0)?'<span class="badge">'+pending+'</span>':''; return '<button class="navlink '+(State.page===n[0]?"active":"")+'" onclick="Admin.go(\''+n[0]+'\')">'+ic(n[1])+t("nav_"+n[0])+badge+'</button>'; }).join(""); }
+Admin.go=function(p){ State.page=p; Admin.toggleSide(false); buildNav(); var meta={dashboard:"grid",users:"users",matches:"net",rewards:"scale",missions:"gift",withdrawals:"wallet",broadcast:"megaphone",settings:"cog"}; $("pageTitle").innerHTML=ic(meta[p])+t("nav_"+p); Admin.render(); window.scrollTo(0,0); };
+</script>
+<script>
+/* ============ RENDER ROUTER ============ */
+Admin.render=function(){ var v=$("view"); switch(State.page){ case"dashboard":V.dashboard(v);break; case"users":v.innerHTML=V.users();break; case"matches":v.innerHTML=V.matches();break; case"rewards":v.innerHTML=V.rewards();break; case"missions":v.innerHTML=V.missions();break; case"withdrawals":v.innerHTML=V.withdrawals();break; case"broadcast":v.innerHTML=V.broadcast();break; case"settings":v.innerHTML=V.settings();break; } };
+var V={};
+
+/* ---- 1. DASHBOARD ---- */
+V.dashboard=function(host){
+  var users=State.users||{}, uids=Object.keys(users).filter(function(k){return users[k].username!=="admin";});
+  var totalCoins=uids.reduce(function(s,k){return s+(users[k].coins||0);},0);
+  var totalPreds=uids.reduce(function(s,k){return s+((users[k].stats&&users[k].stats.totalPredictions)||0);},0);
+  var wds=normArr(State.withdrawals), pending=wds.filter(function(w){return w.status==="pending";}).length;
+  var kpis=[["users","kpi_users",uids.length,"rgba(0,255,156,0.12)","var(--accent)"],["coin","kpi_coins",totalCoins.toLocaleString(),"rgba(255,210,74,0.12)","var(--gold)"],["target","kpi_preds",totalPreds,"rgba(77,181,255,0.12)","var(--info)"],["wallet","kpi_pending",pending,"rgba(255,93,115,0.12)","var(--danger)"]];
+  var h='<div class="kpi-grid">'+kpis.map(function(k){ return '<div class="kpi"><div class="ic" style="background:'+k[3]+'">'+ic(k[0]).replace('class="ico"','class="ico" style="stroke:'+k[4]+'"')+'</div><div class="v">'+k[2]+'</div><div class="l">'+t(k[1])+'</div></div>'; }).join("")+'</div>';
+  h+='<div class="chart-grid"><div class="card"><div class="sect">'+ic("trophy")+t("topPredictors")+'</div><div class="chart-box"><canvas id="chTop"></canvas></div></div><div class="card"><div class="sect">'+ic("wallet")+t("wdStatus")+'</div><div class="chart-box"><canvas id="chWd"></canvas></div></div></div>';
+  host.innerHTML=h; V.renderCharts(uids,users,wds);
+};
+V.renderCharts=function(uids,users,wds){
+  if(typeof Chart==="undefined"){ var b=$("chTop"); if(b)b.parentNode.innerHTML='<div class="empty">'+ic("info")+'<div>Chart.js '+t("noData")+'</div></div>'; return; }
+  var top=uids.map(function(k){return {n:users[k].username,w:(users[k].stats&&users[k].stats.won)||0};}).sort(function(a,b){return b.w-a.w;}).slice(0,10);
+  Object.keys(charts).forEach(function(k){ try{charts[k].destroy();}catch(e){} });
+  var ctx1=$("chTop"); if(ctx1){ if(top.length===0)ctx1.parentNode.innerHTML='<div class="empty">'+ic("info")+'<div>'+t("noData")+'</div></div>'; else charts.top=new Chart(ctx1,{type:"bar",data:{labels:top.map(function(x){return x.n;}),datasets:[{label:t("wins"),data:top.map(function(x){return x.w;}),backgroundColor:"rgba(0,255,156,0.55)",borderColor:"#00ff9c",borderWidth:1,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:"#8f9bb3"},grid:{display:false}},y:{ticks:{color:"#8f9bb3"},grid:{color:"rgba(255,255,255,0.05)"}}}}}); }
+  var ctx2=$("chWd"); var counts={pending:0,approved:0,rejected:0}; wds.forEach(function(w){ if(counts[w.status]!=null)counts[w.status]++; });
+  if(ctx2){ if(wds.length===0)ctx2.parentNode.innerHTML='<div class="empty">'+ic("info")+'<div>'+t("noData")+'</div></div>'; else charts.wd=new Chart(ctx2,{type:"doughnut",data:{labels:[t("pending"),t("approved"),t("rejected")],datasets:[{data:[counts.pending,counts.approved,counts.rejected],backgroundColor:["#ffb020","#00ff9c","#ff5d73"],borderColor:"#111a2e",borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom",labels:{color:"#8f9bb3",padding:14}}}}}); }
+};
+
+/* ---- 2. USERS ---- */
+V.onSearch=function(v){ State.search=v; var tb=$("userRows"); if(tb)tb.innerHTML=V.userRows(); };
+V.users=function(){ return '<div class="card"><div class="searchbar">'+ic("search","ico-sm")+'<input placeholder="'+t("searchUsers")+'" value="'+esc(State.search)+'" oninput="V.onSearch(this.value)" /></div><div class="tablewrap"><table><thead><tr><th>'+t("user")+'</th><th>'+t("balance")+'</th><th>'+t("predictions")+'</th><th>'+t("wins")+'</th><th>'+t("status")+'</th><th>'+t("actions")+'</th></tr></thead><tbody id="userRows">'+V.userRows()+'</tbody></table></div></div>'; };
+V.userRows=function(){ var users=State.users||{}, q=(State.search||"").toLowerCase(); var uids=Object.keys(users).filter(function(k){return users[k].username!=="admin"&&(!q||(users[k].username||"").toLowerCase().indexOf(q)>=0);}).sort(function(a,b){return (users[b].coins||0)-(users[a].coins||0);});
+  if(uids.length===0)return '<tr><td colspan="6"><div class="empty">'+ic("users")+'<div>'+t("noUsers")+'</div></div></td></tr>';
+  return uids.map(function(k){ var u=users[k], s=u.stats||{}; return '<tr><td><div class="row"><div class="av" style="background:'+avatarColor(u.username)+'">'+esc((u.username||"?").charAt(0).toUpperCase())+'</div><b>'+esc(u.username)+'</b></div></td><td><span class="coin">'+Math.round(u.coins||0)+'</span></td><td>'+(s.totalPredictions||0)+'</td><td class="t-accent">'+(s.won||0)+'</td><td>'+(u.banned?'<span class="pill lose">'+t("banned")+'</span>':'<span class="pill up">'+t("active")+'</span>')+'</td><td><div class="actions"><button class="iconbtn" title="'+t("editBalance")+'" onclick="Admin.openEditUser(\''+k+'\')">'+ic("edit","ico-sm")+'</button><button class="iconbtn w" onclick="Admin.toggleBan(\''+k+'\')">'+ic("ban","ico-sm")+'</button><button class="iconbtn d" onclick="Admin.deleteUser(\''+k+'\')">'+ic("trash","ico-sm")+'</button></div></td></tr>'; }).join(""); };
+
+/* ---- 3. MATCHES & API ---- */
+V.matches=function(){
+  var leagueOpts=LEAGUES.map(function(l){return '<option value="'+l.id+'">'+esc(l.name)+' ('+esc(l.country)+')</option>';}).join("");
+  var h='<div class="card"><div class="sect">'+ic("cloud")+t("apiSearchTitle")+'</div>';
+  h+='<div class="grid2"><div class="field"><label>'+t("league")+'</label><select id="apLeague">'+leagueOpts+'</select></div><div class="field"><label>'+t("daysAhead")+'</label><select id="apNext"><option value="10">10</option><option value="20">20</option><option value="30">30</option></select></div></div>';
+  h+='<div class="row wrap"><button class="btn" id="btnSearch" onclick="Admin.apiSearch()">'+ic("search","ico-sm")+t("btnSearchMatches")+'</button><button class="btn btn-ghost" id="btnAI" onclick="Admin.aiFill()">'+ic("spark","ico-sm")+t("btnAIfill")+'</button></div>';
+  h+='<div id="availList" style="margin-top:14px">'+V.availableList()+'</div></div>';
+  h+='<div class="card"><div class="sect">'+ic("plus")+t("createForm")+'</div><div class="grid2"><div class="field"><label>'+t("teamA")+'</label><input id="nA" /></div><div class="field"><label>'+t("teamB")+'</label><input id="nB" /></div></div><div class="grid3"><div class="field"><label>'+t("league")+'</label><input id="nLg" value="Premier League" /></div><div class="field"><label>'+t("colorA")+'</label><input id="nCA" type="color" value="#00d98b" style="height:44px;padding:4px" /></div><div class="field"><label>'+t("colorB")+'</label><input id="nCB" type="color" value="#4db5ff" style="height:44px;padding:4px" /></div></div><div class="field"><label>'+t("kickoff")+'</label><input id="nKick" type="datetime-local" /></div><label class="row" style="gap:8px;margin-bottom:12px;cursor:pointer"><input id="nThumb" type="checkbox" checked style="width:auto" /> <span class="muted" style="font-size:13px">'+t("genThumb")+'</span></label><div class="row" style="gap:8px;margin-bottom:10px"><span class="muted" style="font-size:12px">'+t("sourceLabel")+'</span><span class="pill info" id="srcBadge">'+t("manualEntry")+'</span></div><button class="btn" onclick="Admin.addMatch()">'+ic("check","ico-sm")+t("createMatchBtn")+'</button></div>';
+  h+='<div class="card"><div class="sect">'+ic("list")+t("allMatches")+'</div>';
+  var list=normArr(State.matches).sort(function(a,b){return b.kickoff-a.kickoff;});
+  if(list.length===0)h+='<div class="empty">'+ic("net")+'<div>'+t("noMatches")+'</div></div>';
+  else{ h+='<div class="tablewrap"><table><thead><tr><th></th><th>'+t("league")+'</th><th>Match</th><th>'+t("kickoff")+'</th><th>'+t("result")+'</th><th>'+t("actions")+'</th></tr></thead><tbody>';
+    list.forEach(function(m){ var st=m.result?'<span class="pill up">'+m.result.a+' - '+m.result.b+'</span>':(now()>=m.kickoff?'<span class="pill lock">'+t("pending")+'</span>':'<span class="pill info">'+t("active")+'</span>'); var th=m.thumbnail?'<div style="width:46px;height:30px;border-radius:6px;background:url(&quot;'+esc(m.thumbnail)+'&quot;) center/cover"></div>':(m.thumbPending?'<span class="pill lock">IA…</span>':'<div style="width:46px;height:30px;border-radius:6px;background:'+(m.teamAColor||'#22314f')+'"></div>'); h+='<tr><td>'+th+'</td><td>'+esc(m.league)+'</td><td><b>'+esc(m.teamA)+'</b> vs <b>'+esc(m.teamB)+'</b>'+(m.source?(' <span class="pill '+(m.verified?'up':'lock')+'" style="font-size:9px;margin-left:4px">'+(m.verified?t("verifiedApi"):t("unverifiedAi"))+'</span>'):'')+'</td><td>'+fmtTime(m.kickoff)+'</td><td>'+st+'</td><td><div class="actions"><button class="iconbtn" title="'+t("genThumb")+'" onclick="Admin.genThumb(\''+m.id+'\')">'+ic("image","ico-sm")+'</button><button class="iconbtn" title="'+t("setResult")+'" onclick="Admin.openResult(\''+m.id+'\')">'+ic("flag","ico-sm")+'</button><button class="iconbtn" title="'+t("settle")+'" onclick="Admin.settle(\''+m.id+'\')">'+ic("bolt","ico-sm")+'</button><button class="iconbtn d" onclick="Admin.deleteMatch(\''+m.id+'\')">'+ic("trash","ico-sm")+'</button></div></td></tr>'; });
+    h+='</tbody></table></div>'; }
+  return h+'</div>';
+};
+V.availableList=function(){
+  if(State.loadingApi)return '<div class="empty">'+ic("refresh")+'<div>'+t("searching")+'</div></div>';
+  var av=State.available||[];
+  if(av.length===0)return '<div class="muted" style="font-size:13px;display:flex;gap:7px;align-items:center">'+ic("info","ico-sm")+t("noAvailable")+'</div>';
+  return '<div class="sect" style="margin:2px 0 10px">'+ic("list")+t("availableFound",{n:av.length})+'</div>'+av.map(function(fx,i){ return '<div class="log" style="align-items:center;justify-content:space-between"><div class="row"><span class="ac">'+(i+1)+'.</span><div><div style="font-weight:700;color:var(--text)">'+esc(fx.teamA)+' vs '+esc(fx.teamB)+'</div><div class="muted" style="font-size:11px">'+esc(fx.league)+' · '+fmtTime(fx.kickoff)+'</div></div></div>'+(fx.used?('<button class="btn btn-sm" disabled style="opacity:.5;cursor:not-allowed">'+ic("check","ico-sm")+t("used")+'</button>'):('<button class="btn btn-sm" onclick="Admin.useFixture('+i+')">'+ic("check","ico-sm")+t("use")+'</button>'))+'</div>'; }).join(""); };
+
+/* ---- 4. REWARDS & RULES ---- */
+V.rewards=function(){
+  var r=State.rules||DEFAULT_RULES;
+  function f(id,lbl,ic0){ return '<div class="field"><label>'+ic(ic0,"ico-sm")+' '+t(lbl)+'</label><input id="'+id+'" type="number" value="'+(r[id]||0)+'" /></div>'; }
+  return '<div class="card"><div class="sect">'+ic("scale")+t("rulesTitle")+'</div><div class="grid2">'+f("dailyReward","dailyReward","gift")+f("referralBonus","referralBonus","users")+f("exchangeRate","exchangeRate","coin")+f("minWithdrawal","minWithdrawal","wallet")+f("entryFee","entryFee","target")+f("rewardWinner","rewardWinner","trophy")+f("rewardExactScore","rewardExact","target")+f("rewardTotals","rewardTotals","net")+f("rewardBtts","rewardBtts","ball")+'</div><button class="btn" onclick="Admin.saveRules()">'+ic("save","ico-sm")+t("saveRules")+'</button></div>';
+};
+
+/* ---- 5. MISSIONS ---- */
+V.missions=function(){
+  var h='<div class="card"><div class="row-between"><div class="sect" style="margin:0">'+ic("gift")+t("missionsTitle")+'</div><button class="btn btn-sm" onclick="Admin.openMission()">'+ic("plus","ico-sm")+t("newMission")+'</button></div></div>';
+  var ms=normArr(State.missions);
+  if(ms.length===0)return h+'<div class="card"><div class="empty">'+ic("gift")+'<div>'+t("noMissions")+'</div></div></div>';
+  ms.forEach(function(m){ h+='<div class="card"><div class="row-between"><div class="row"><div class="av" style="width:40px;height:40px;border-radius:11px;background:rgba(0,255,156,0.1)">'+ic("target","ico-sm").replace('class="ico ico-sm"','class="ico ico-sm" style="stroke:var(--accent)"')+'</div><div><div style="font-weight:700">'+esc(m.title)+'</div><div class="muted" style="font-size:12px">'+esc(m.titleEn||"")+' · '+esc(m.url||"")+'</div></div></div><div class="row"><span class="coin">+'+m.reward+'</span>'+(m.active?'<span class="pill up">'+t("active")+'</span>':'<span class="pill lose">off</span>')+'<button class="iconbtn" onclick="Admin.openMission(\''+m.id+'\')">'+ic("edit","ico-sm")+'</button><button class="iconbtn d" onclick="Admin.deleteMission(\''+m.id+'\')">'+ic("trash","ico-sm")+'</button></div></div></div>'; });
+  return h;
+};
+
+/* ---- 6. WITHDRAWALS ---- */
+V.withdrawals=function(){
+  var h='<div class="card"><div class="sect">'+ic("wallet")+t("wdTitle")+'</div>';
+  var list=normArr(State.withdrawals).sort(function(a,b){ var o={pending:0,approved:1,rejected:2}; return (o[a.status]-o[b.status])||(b.ts-a.ts); });
+  if(list.length===0)return h+'<div class="empty">'+ic("wallet")+'<div>'+t("noWd")+'</div></div></div>';
+  h+='<div class="tablewrap"><table><thead><tr><th>'+t("user")+'</th><th>'+t("amount")+'</th><th>'+t("method")+'</th><th>'+t("details")+'</th><th>'+t("date")+'</th><th>'+t("status")+'</th><th>'+t("actions")+'</th></tr></thead><tbody>';
+  list.forEach(function(w){ var stcl=w.status==="approved"?"up":w.status==="rejected"?"lose":"lock"; var act=w.status==="pending"?'<button class="btn btn-sm" onclick="Admin.approveWd(\''+w.id+'\')">'+ic("check","ico-sm")+t("approve")+'</button><button class="btn btn-sm btn-danger" onclick="Admin.rejectWd(\''+w.id+'\')">'+ic("x","ico-sm")+t("reject")+'</button>':'—'; h+='<tr><td><b>'+esc(w.username)+'</b></td><td><span class="coin">'+w.amount+'</span></td><td>'+esc(w.method)+'</td><td class="muted">'+esc(w.details)+'</td><td class="muted">'+fmtTime(w.ts)+'</td><td><span class="pill '+stcl+'">'+esc(w.status)+'</span></td><td><div class="actions">'+act+'</div></td></tr>'; });
+  return h+'</tbody></table></div></div>';
+};
+
+/* ---- 7. BROADCAST ---- */
+V.broadcast=function(){ var count=Object.keys(State.users||{}).filter(function(k){return State.users[k].username!=="admin";}).length;
+  return '<div class="card"><div class="sect">'+ic("megaphone")+t("bcTitle")+'</div><div class="field"><label>'+t("bcTitleField")+'</label><input id="bcT" /></div><div class="field"><label>'+t("bcMsg")+'</label><textarea id="bcM"></textarea></div><div class="field"><label>'+t("bcImg")+'</label><input id="bcI" placeholder="https://…" /></div><button class="btn" onclick="Admin.broadcast()">'+ic("megaphone","ico-sm")+t("bcSend")+' ('+count+')</button></div>';
+};
+
+/* ---- 8. SETTINGS & LOGS ---- */
+V.settings=function(){ var s=State.system||DEFAULT_SYSTEM;
+  var h='<div class="card"><div class="sect">'+ic("cog")+t("setTitle")+'</div><div class="field"><label>'+t("tgChannel")+'</label><input id="sTg" value="'+esc(s.telegramChannel||"")+'" /></div><div class="field"><label>'+t("monetagZone")+'</label><input id="sMz" value="'+esc(s.monetagZone||"")+'" /></div><div class="grid2"><div class="field"><label>'+t("apiEnabled")+'</label><select id="sApiEn"><option value="1" '+(s.apiEnabled?"selected":"")+'>'+t("active")+'</option><option value="0" '+(!s.apiEnabled?"selected":"")+'>off</option></select></div><div class="field"><label>'+t("apiKey")+'</label><input id="sApiKey" value="'+esc(s.apiKey||"")+'" /></div></div><button class="btn" onclick="Admin.saveSettings()">'+ic("save","ico-sm")+t("saveSettings")+'</button></div>';
+  h+='<div class="card"><div class="row-between"><div class="sect" style="margin:0">'+ic("list")+t("logs")+'</div><button class="btn btn-ghost btn-sm" onclick="Admin.clearLogs()">'+ic("trash","ico-sm")+t("clearLogs")+'</button></div><div style="margin-top:12px">';
+  if(State.logs.length===0)h+='<div class="empty">'+ic("list")+'<div>'+t("noLogs")+'</div></div>';
+  else State.logs.forEach(function(l){ h+='<div class="log"><span class="tm">'+fmtTime(l.ts)+'</span><span class="ac">'+esc(l.action)+'</span><span>'+esc(l.detail)+'</span></div>'; });
+  return h+'</div></div>';
+};
+</script>
+<script>
+/* ============ MODAL HELPERS ============ */
+function openModal(html){ $("modalHost").innerHTML='<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">'+html+'</div></div>'; }
+function closeModal(){ $("modalHost").innerHTML=""; }
+
+/* ============ USERS ACTIONS ============ */
+Admin.openEditUser=function(uid){ var u=State.users[uid]; if(!u)return; State.editUser=uid; openModal('<h3>'+ic("edit")+t("editBalance")+' — '+esc(u.username)+'</h3><div class="field"><label>'+t("newBalance")+'</label><input id="euBal" type="number" value="'+Math.round(u.coins||0)+'" /></div><div class="row"><button class="btn" onclick="Admin.saveUser()">'+ic("save","ico-sm")+t("save")+'</button><button class="btn btn-ghost" onclick="closeModal()">'+t("cancel")+'</button></div>'); };
+Admin.saveUser=function(){ var uid=State.editUser, val=parseInt($("euBal").value,10)||0; DBX.update("users/"+uid,{coins:val}).then(function(){ logAction("EDIT_BALANCE",State.users[uid].username+" -> "+val); toast(t("userUpdated"),"ok"); closeModal(); }); };
+Admin.toggleBan=function(uid){ var u=State.users[uid]; var nb=!u.banned; DBX.update("users/"+uid,{banned:nb}).then(function(){ logAction(nb?"BAN":"UNBAN",u.username); toast(nb?t("userBanned"):t("userUnbanned"),"ok"); }); };
+Admin.deleteUser=function(uid){ if(!confirm(t("confirmDelete")))return; var name=State.users[uid].username; DBX.remove("users/"+uid).then(function(){ logAction("DELETE_USER",name); toast(t("userDeleted"),"ok"); }); };
+
+/* ============ MATCHES ACTIONS ============ */
+function toLocalInput(ts){ var d=new Date(ts-(new Date().getTimezoneOffset()*60000)); return d.toISOString().slice(0,16); }
+function parseAiJson(txt){ if(!txt)return null; try{ return JSON.parse(txt); }catch(e){} var m=txt.match(/\{[\s\S]*\}/); if(m){ try{ return JSON.parse(m[0]); }catch(e){} } return null; }
+// >>> BOUTON 1 : recherche des matchs reels A VENIR via football-data.org, listes dans l'ordre.
+// Recherche des matchs A VENIR (status=SCHEDULED) d'une competition via football-data.org v4.
+Admin.apiSearch=function(){ var code=$("apLeague").value, nx=parseInt($("apNext").value||"15",10); State.loadingApi=true; $("availList").innerHTML=V.availableList();
+  apiFootball("/competitions/"+code+"/matches?status=SCHEDULED").then(function(d){ var arr=(d&&d.matches)||[]; State.loadingApi=false; if(!arr.length){ State.available=[]; $("availList").innerHTML=V.availableList(); toast((d&&d.message)?(t("apiError")+" — "+d.message):t("noAvailable"),"err"); return; } State.available=arr.map(function(fx){ return { source:"api", verified:true, league:(fx.competition&&fx.competition.name)||"", teamA:(fx.homeTeam&&(fx.homeTeam.name||fx.homeTeam.shortName))||"", teamB:(fx.awayTeam&&(fx.awayTeam.name||fx.awayTeam.shortName))||"", kickoff:fx.utcDate?new Date(fx.utcDate).getTime():now()+864e5 }; }).filter(function(x){ return x.kickoff>now()&&x.teamA&&x.teamB; }).sort(function(x,y){return x.kickoff-y.kickoff;}).slice(0,nx); $("availList").innerHTML=V.availableList(); if(State.available.length===0)toast(t("noAvailable"),"err"); else toast(t("availableFound",{n:State.available.length}),"ok"); logAction("API_SEARCH",code+" ("+State.available.length+")"); }).catch(function(e){ console.error(e); State.loadingApi=false; State.available=[]; $("availList").innerHTML=V.availableList(); toast(t("apiError")+((e&&e.message)?(" — "+e.message):""),"err"); }); };
+Admin.setSrcBadge=function(){ var el=$("srcBadge"); if(!el)return; var s=State.formSource||"manual"; if(s==="api"){ el.className="pill up"; el.innerHTML=ic("check","ico-sm")+t("verifiedApi"); } else if(s==="ai"){ el.className="pill lock"; el.innerHTML=ic("spark","ico-sm")+t("unverifiedAi"); } else { el.className="pill info"; el.textContent=t("manualEntry"); } };
+Admin.useFixture=function(i){ var fx=State.available[i]; if(!fx||fx.used)return; $("nA").value=fx.teamA; $("nB").value=fx.teamB; $("nLg").value=fx.league; if(fx.kickoff)$("nKick").value=toLocalInput(fx.kickoff); State.formSource="api"; Admin.setSrcBadge(); fx.used=true; $("availList").innerHTML=V.availableList(); toast(t("formFilled"),"ok"); };
+// >>> BOUTON 2 (icone IA) : Agnes voit les matchs dispo et remplit les cases du formulaire.
+Admin.aiFill=function(){ var btn=$("btnAI"); if(btn)btn.disabled=true; toast(t("aiThinking"));
+  // Anti-repetition: exclut les matchs deja crees + les dernieres suggestions IA.
+  var excl={}; Object.keys(State.matches||{}).forEach(function(id){ var m=State.matches[id]; if(m&&m.teamA&&m.teamB)excl[keyOf(m.teamA,m.teamB)]=1; }); (State.aiRecent||[]).forEach(function(k){ excl[k]=1; });
+  var avail=(State.available&&State.available.length)?State.available.slice(0,25).map(function(f){return {league:f.league,teamA:f.teamA,teamB:f.teamB,kickoff:new Date(f.kickoff).toISOString()};}):null;
+  var nonce=Math.random().toString(36).slice(2,8);
+  var userMsg=(avail?("Liste de matchs reels a venir (choisis-en UN): "+JSON.stringify(avail)):("Aucune liste API. Propose UN match reel plausible a venir (7 prochains jours) d'un grand championnat, en VARIANT le championnat et les equipes."))+" A EXCLURE absolument (deja proposes/publies): "+JSON.stringify(Object.keys(excl))+". Varie ta reponse (seed "+nonce+"). Date actuelle: "+new Date().toISOString()+". Renvoie uniquement le JSON.";
+  function applyObj(o){ if(o.teamA)$("nA").value=o.teamA; if(o.teamB)$("nB").value=o.teamB; if(o.league)$("nLg").value=o.league; if(o.teamAColor&&/^#/.test(o.teamAColor))$("nCA").value=o.teamAColor; if(o.teamBColor&&/^#/.test(o.teamBColor))$("nCB").value=o.teamBColor; var ts=o.kickoff?Date.parse(o.kickoff):NaN; if(isNaN(ts)||ts<now())ts=now()+(1+Math.floor(Math.random()*5))*864e5; $("nKick").value=toLocalInput(ts); State.aiOdds={home:+o.oddsHome||2.2,draw:+o.oddsDraw||3.2,away:+o.oddsAway||2.8}; State.aiRecent=(State.aiRecent||[]); State.aiRecent.push(keyOf(o.teamA,o.teamB)); if(State.aiRecent.length>8)State.aiRecent.shift(); State.formSource="ai"; Admin.setSrcBadge(); }
+  agnesChat([ {role:"system",content:AI_MATCH_SYSTEM}, {role:"user",content:userMsg} ],{temperature:0.9}).then(function(txt){ var o=parseAiJson(txt); if(!o||!o.teamA||!o.teamB){ applyObj(pickFallbackFixture(excl)); toast(t("aiFallback"),"err"); } else { applyObj(o); toast(t("aiFilled")+" — "+t("unverifiedAi"),"ok"); } if(btn)btn.disabled=false; }).catch(function(e){ console.error(e); applyObj(pickFallbackFixture(excl)); toast(t("aiFallback"),"err"); if(btn)btn.disabled=false; }); };
+Admin.addMatch=function(){ var a=$("nA").value.trim(), b=$("nB").value.trim(), lg=$("nLg").value.trim()||"Match", ca=$("nCA").value, cb=$("nCB").value, k=$("nKick").value; if(!a||!b){ toast(t("teamA")+" / "+t("teamB"),"err"); return; } var kickoff=k?new Date(k).getTime():now()+864e5; if(kickoff<=now())toast(t("kickoffPast"),"err"); var id="m"+now(); var odds=State.aiOdds||{home:2.2,draw:3.2,away:2.8}; State.aiOdds=null; var src=State.formSource||"manual"; var wantThumb=$("nThumb")?$("nThumb").checked:false; var rec={id:id,league:lg,teamA:a,teamAColor:ca,teamB:b,teamBColor:cb,kickoff:kickoff,status:"upcoming",result:null,odds:odds,thumbnail:null,thumbPending:wantThumb,source:src,verified:(src==="api")}; DBX.write("matches/"+id,rec).then(function(){ logAction("ADD_MATCH",a+" vs "+b+" ["+src+"]"); toast(t("matchAdded"),"ok"); $("nA").value="";$("nB").value=""; State.formSource="manual"; if(wantThumb)Admin.genThumb(id,rec); }); };
+// Genere une miniature de fond football (aucun texte) via Agnes puis la stocke sur le match.
+Admin.genThumb=function(id,rec){ var m=rec||State.matches[id]; if(!m)return; toast(t("thumbGen")); DBX.update("matches/"+id,{thumbPending:true}); agnesImage(thumbnailPrompt(m)).then(function(url){ if(!url){ DBX.update("matches/"+id,{thumbPending:false}); toast(t("thumbError"),"err"); return; } DBX.update("matches/"+id,{thumbnail:url,thumbPending:false}).then(function(){ logAction("GEN_THUMB",m.teamA+" vs "+m.teamB); toast(t("thumbDone"),"ok"); }); }).catch(function(e){ console.error(e); DBX.update("matches/"+id,{thumbPending:false}); toast(t("thumbError"),"err"); }); };
+Admin.deleteMatch=function(id){ if(!confirm("?"))return; var m=State.matches[id]; DBX.remove("matches/"+id).then(function(){ logAction("DELETE_MATCH",m?m.teamA+" vs "+m.teamB:id); }); };
+Admin.openResult=function(id){ var m=State.matches[id]; if(!m)return; State.resultMatch=id; var r=m.result||{a:0,b:0}; openModal('<h3>'+ic("flag")+t("setResult")+'</h3><div class="muted" style="margin-bottom:14px">'+esc(m.teamA)+' vs '+esc(m.teamB)+'</div><div class="grid2"><div class="field"><label>'+t("scoreA")+' ('+esc(m.teamA)+')</label><input id="rA" type="number" min="0" value="'+r.a+'" /></div><div class="field"><label>'+t("scoreB")+' ('+esc(m.teamB)+')</label><input id="rB" type="number" min="0" value="'+r.b+'" /></div></div><div class="row"><button class="btn" onclick="Admin.saveResult()">'+ic("save","ico-sm")+t("saveResult")+'</button><button class="btn btn-ghost" onclick="closeModal()">'+t("cancel")+'</button></div>'); };
+Admin.saveResult=function(){ var id=State.resultMatch, a=parseInt($("rA").value,10)||0, b=parseInt($("rB").value,10)||0; DBX.update("matches/"+id,{result:{a:a,b:b},status:"finished"}).then(function(){ var m=State.matches[id]; logAction("SET_RESULT",m.teamA+" "+a+"-"+b+" "+m.teamB); toast(t("resultSaved"),"ok"); closeModal(); }); };
+
+/* ---- SETTLE PREDICTIONS (auto-credit) ---- */
+function evalPred(p,res){ var wins={}; var winner=res.a>res.b?"home":res.a<res.b?"away":"draw"; var total=res.a+res.b; var r=State.rules||DEFAULT_RULES; var payout=0;
+  if(p.winner){ wins.winner=(p.winner===winner); if(wins.winner)payout+=r.rewardWinner; }
+  if(p.exact){ wins.exact=(p.exact.a===res.a&&p.exact.b===res.b); if(wins.exact)payout+=r.rewardExactScore; }
+  if(p.totals){ var ok=p.totals==="over"?total>2.5:p.totals==="under"?total<2.5:(total===2||total===3); wins.totals=ok; if(ok)payout+=r.rewardTotals; }
+  if(p.btts){ var both=(res.a>0&&res.b>0)?"yes":"no"; wins.btts=(p.btts===both); if(wins.btts)payout+=r.rewardBtts; }
+  var anyWin=Object.keys(wins).some(function(k){return wins[k];}); return {payout:payout,won:anyWin}; }
+Admin.settle=function(matchId){ var m=State.matches[matchId]; if(!m||!m.result){ toast(t("needResult"),"err"); return; }
+  var users=State.users||{}, settled=0, credited=0, chain=Promise.resolve();
+  Object.keys(users).forEach(function(uid){ var u=users[uid]; var preds=u.predictions||{}; var p=preds[matchId]; if(!p||p.settled)return; (function(uid,u,preds,p){ chain=chain.then(function(){ var ev=evalPred(p,m.result); preds[matchId]=Object.assign({},p,{settled:true,won:ev.won,payout:ev.payout}); var st=u.stats||{totalPredictions:0,won:0,lost:0,winRate:0}; if(ev.won)st.won=(st.won||0)+1; else st.lost=(st.lost||0)+1; st.winRate=st.totalPredictions?Math.round((st.won/st.totalPredictions)*100):0; settled++; credited+=ev.payout; var upd={predictions:preds,stats:st}; if(ev.payout>0)upd.coins=(u.coins||0)+ev.payout; return DBX.update("users/"+uid,upd).then(function(){ return pushNotifTo(uid,ev.won?"win":"system",ev.won?(LANG==="fr"?"Pronostic gagné !":"Prediction won!"):(LANG==="fr"?"Pronostic réglé":"Prediction settled"),m.teamA+" "+m.result.a+"-"+m.result.b+" "+m.teamB+(ev.payout>0?(" · +"+ev.payout):"")); }); }); })(uid,u,preds,p); });
+  chain.then(function(){ logAction("SETTLE",m.teamA+" vs "+m.teamB+" ("+settled+")"); toast(settled+" "+t("settleDone")+" (+"+credited+")","ok"); }); };
+
+/* ============ RULES ============ */
+Admin.saveRules=function(){ var keys=["dailyReward","referralBonus","exchangeRate","minWithdrawal","entryFee","rewardWinner","rewardExactScore","rewardTotals","rewardBtts"]; var r={}; keys.forEach(function(k){ r[k]=parseInt($(k).value,10)||0; }); DBX.write("config/rules",r).then(function(){ logAction("SAVE_RULES",""); toast(t("rulesSaved"),"ok"); }); };
+
+/* ============ MISSIONS ============ */
+Admin.openMission=function(id){ var m=id?State.missions[id]:{id:"m"+now(),title:"",titleEn:"",reward:50,url:"",active:true}; State.editMission=m.id; openModal('<h3>'+ic("gift")+(id?t("edit"):t("newMission"))+'</h3><div class="field"><label>'+t("missionTitleFr")+'</label><input id="mT" value="'+esc(m.title)+'" /></div><div class="field"><label>'+t("missionTitleEn")+'</label><input id="mTe" value="'+esc(m.titleEn||"")+'" /></div><div class="grid2"><div class="field"><label>'+t("reward")+'</label><input id="mR" type="number" value="'+m.reward+'" /></div><div class="field"><label>'+t("activeQ")+'</label><select id="mAc"><option value="1" '+(m.active?"selected":"")+'>'+t("active")+'</option><option value="0" '+(!m.active?"selected":"")+'>off</option></select></div></div><div class="field"><label>'+t("link")+'</label><input id="mU" value="'+esc(m.url||"")+'" placeholder="#ad, #predict, https://…" /></div><div class="row"><button class="btn" onclick="Admin.saveMission()">'+ic("save","ico-sm")+t("save")+'</button><button class="btn btn-ghost" onclick="closeModal()">'+t("cancel")+'</button></div>'); };
+Admin.saveMission=function(){ var id=State.editMission; var rec={id:id,title:$("mT").value.trim(),titleEn:$("mTe").value.trim(),reward:parseInt($("mR").value,10)||0,url:$("mU").value.trim(),active:$("mAc").value==="1"}; DBX.write("config/missions/"+id,rec).then(function(){ logAction("SAVE_MISSION",rec.title); toast(t("missionSaved"),"ok"); closeModal(); }); };
+Admin.deleteMission=function(id){ if(!confirm("?"))return; DBX.remove("config/missions/"+id).then(function(){ logAction("DELETE_MISSION",id); toast(t("missionDeleted"),"ok"); }); };
+
+/* ============ WITHDRAWALS ============ */
+function updUserWithdrawal(uid,wid,status){ return DBX.read("users/"+uid+"/withdrawals").then(function(l){ l=normArr(l); l.forEach(function(w){ if(w.id===wid)w.status=status; }); return DBX.write("users/"+uid+"/withdrawals",l); }); }
+Admin.approveWd=function(wid){ if(!confirm(t("approveConfirm")))return; var w=State.withdrawals[wid]; if(!w)return; DBX.update("withdrawals/"+wid,{status:"approved"}).then(function(){ return updUserWithdrawal(w.uid,wid,"approved"); }).then(function(){ return pushNotifTo(w.uid,"gain",LANG==="fr"?"Retrait approuvé":"Payout approved",w.amount+" · "+w.method); }).then(function(){ logAction("APPROVE_WD",w.username+" "+w.amount); toast(t("wdApproved"),"ok"); }); };
+Admin.rejectWd=function(wid){ if(!confirm(t("rejectConfirm")))return; var w=State.withdrawals[wid]; if(!w)return; var u=State.users[w.uid]; var refund=(u?(u.coins||0):0)+w.amount; DBX.update("withdrawals/"+wid,{status:"rejected"}).then(function(){ return updUserWithdrawal(w.uid,wid,"rejected"); }).then(function(){ return DBX.update("users/"+w.uid,{coins:refund}); }).then(function(){ return pushNotifTo(w.uid,"system",LANG==="fr"?"Retrait rejeté":"Payout rejected",(LANG==="fr"?"Pièces remboursées : ":"Coins refunded: ")+w.amount); }).then(function(){ logAction("REJECT_WD",w.username+" "+w.amount); toast(t("wdRejected"),"ok"); }); };
+
+/* ============ BROADCAST ============ */
+Admin.broadcast=function(){ var title=$("bcT").value.trim(), msg=$("bcM").value.trim(), img=$("bcI").value.trim(); if(!title||!msg){ toast(t("bcEmpty"),"err"); return; } var users=State.users||{}, uids=Object.keys(users).filter(function(k){return users[k].username!=="admin";}), chain=Promise.resolve(); uids.forEach(function(uid){ chain=chain.then(function(){ return pushNotifTo(uid,"announce",title,msg,img||null); }); }); chain.then(function(){ logAction("BROADCAST",title); toast(t("bcSent",{n:uids.length}),"ok"); $("bcT").value="";$("bcM").value="";$("bcI").value=""; }); };
+
+/* ============ SETTINGS / API / LOGS ============ */
+Admin.saveSettings=function(){ var s={ telegramChannel:$("sTg").value.trim(), monetagZone:$("sMz").value.trim(), apiEnabled:$("sApiEn").value==="1", apiKey:$("sApiKey").value.trim() }; DBX.write("config/system",s).then(function(){ FOOTBALL_API.ENABLED=s.apiEnabled; if(s.apiKey)FOOTBALL_API.KEY=s.apiKey; logAction("SAVE_SETTINGS",""); toast(t("settingsSaved"),"ok"); }); };
+Admin.clearLogs=function(){ DBX.write("logs",[]).then(function(){ toast("OK","ok"); }); };
+Admin.apiSync=function(){ var s=State.system||DEFAULT_SYSTEM; if(!s.apiEnabled||!s.apiKey||s.apiKey==="YOUR_FOOTBALL_API_KEY"){ toast(t("apiDisabled"),"err"); return; }
+  /* [PASTE_FOOTBALL_API_KEY] Exemple d'appel football-data.org (matchs du jour) :
+     fetch(FOOTBALL_API.BASE+"/matches?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD",{headers:{"X-Auth-Token":s.apiKey}})
+       .then(function(r){return r.json();}).then(function(d){ (d.matches||[]).forEach(function(fx){ ... mapper vers matches/<id> ... }); }); */
+  toast("API sync — "+(LANG==="fr"?"branche l'appel fetch ici":"wire fetch call here"),"ok"); logAction("API_SYNC",""); };
+
+/* ============ BOOT ============ */
+Admin.boot();
+</script>
+</body>
+</html>

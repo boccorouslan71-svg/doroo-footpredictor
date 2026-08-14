@@ -1,0 +1,47 @@
+plugins {
+    id("com.android.application")
+}
+
+def appUrl = (project.hasProperty("DOROO_APP_URL") && project.property("DOROO_APP_URL") != "")
+        ? project.property("DOROO_APP_URL")
+        : "https://doroo-footpredictor.vercel.app/"
+
+android {
+    namespace = "com.doroo.footpredictor"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.doroo.footpredictor"
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0.0"
+        buildConfigField("String", "APP_URL", "\"${appUrl}\"")
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    packaging {
+        resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    }
+}
+
+dependencies {
+    implementation("androidx.core:core:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.webkit:webkit:1.11.0")
+}
