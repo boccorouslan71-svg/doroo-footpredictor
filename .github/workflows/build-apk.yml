@@ -47,8 +47,7 @@ jobs:
           gh release create "${TAG}" \
             --repo "${GITHUB_REPOSITORY}" \
             --title "DOROO FootPredictor ${TAG}" \
-            --notes "Application mobile Android (installez l'APK directement).
-Serveur web : https://github.com/${GITHUB_REPOSITORY}" \
+            --notes "Application mobile Android (installez l'APK directement). Serveur web : https://github.com/${GITHUB_REPOSITORY}" \
             "${APK}"
         env:
           GH_TOKEN: ${{ github.token }}
