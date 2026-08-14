@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -38,7 +39,7 @@ public class MainActivity extends Activity {
         progressBar.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
                 android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
                 android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                android.graphics.Gravity.CENTER));
+                Gravity.CENTER));
 
         android.widget.FrameLayout root = new android.widget.FrameLayout(this);
         root.addView(webView);
